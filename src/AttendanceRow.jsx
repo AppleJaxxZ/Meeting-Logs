@@ -7,7 +7,7 @@ function AttendanceRow({ index, rowData, updateRow }) {
 
   useEffect(() => {
     updateRow(index, localData);
-  }, [localData]);
+  }, [localData, index, updateRow]);
 
   return (
     <tr>
