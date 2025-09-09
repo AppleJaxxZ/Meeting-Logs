@@ -1,4 +1,5 @@
 import SignaturePad from './SignaturePad';
+import CurrentAddressButton from './CurrentAddressButton';
 import './index.css';
 
 function App() {
@@ -31,9 +32,90 @@ function App() {
             <td><input type="text" placeholder="DATE" /></td>
             <td><input type="text" placeholder="TIME 7pm?  "/></td>
             <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><input type="text" placeholder="address" /></td>
+            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
             <td><SignaturePad /></td>
-            <td><input type="text" placeholder="How it affected me" /></td>
+            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
+            
+          </tr>
+          <tr>
+            <td><input type="text" placeholder="DATE" /></td>
+            <td><input type="text" placeholder="TIME 7pm?  "/></td>
+            <td><input type="text" placeholder="Meeting name here" /></td>
+            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
+            <td><SignaturePad /></td>
+            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
+            
+          </tr>
+          <tr>
+            <td><input type="text" placeholder="DATE" /></td>
+            <td><input type="text" placeholder="TIME 7pm?  "/></td>
+            <td><input type="text" placeholder="Meeting name here" /></td>
+            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
+            <td><SignaturePad /></td>
+            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
+            
+          </tr>
+          <tr>
+            <td><input type="text" placeholder="DATE" /></td>
+            <td><input type="text" placeholder="TIME 7pm?  "/></td>
+            <td><input type="text" placeholder="Meeting name here" /></td>
+            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
+            <td><SignaturePad /></td>
+            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
+            
+          </tr>
+          <tr>
+            <td><input type="text" placeholder="DATE" /></td>
+            <td><input type="text" placeholder="TIME 7pm?  "/></td>
+            <td><input type="text" placeholder="Meeting name here" /></td>
+            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
+            <td><SignaturePad /></td>
+            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
+            
+          </tr>
+          <tr>
+            <td><input type="text" placeholder="DATE" /></td>
+            <td><input type="text" placeholder="TIME 7pm?  "/></td>
+            <td><input type="text" placeholder="Meeting name here" /></td>
+            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
+            <td><SignaturePad /></td>
+            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
+            
+          </tr>
+          <tr>
+            <td><input type="text" placeholder="DATE" /></td>
+            <td><input type="text" placeholder="TIME 7pm?  "/></td>
+            <td><input type="text" placeholder="Meeting name here" /></td>
+            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
+            <td><SignaturePad /></td>
+            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
+            
+          </tr>
+          <tr>
+            <td><input type="text" placeholder="DATE" /></td>
+            <td><input type="text" placeholder="TIME 7pm?  "/></td>
+            <td><input type="text" placeholder="Meeting name here" /></td>
+            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
+            <td><SignaturePad /></td>
+            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
+            
+          </tr>
+          <tr>
+            <td><input type="text" placeholder="DATE" /></td>
+            <td><input type="text" placeholder="TIME 7pm?  "/></td>
+            <td><input type="text" placeholder="Meeting name here" /></td>
+            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
+            <td><SignaturePad /></td>
+            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
+            
+          </tr>
+          <tr>
+            <td><input type="text" placeholder="DATE" /></td>
+            <td><input type="text" placeholder="TIME 7pm?  "/></td>
+            <td><input type="text" placeholder="Meeting name here" /></td>
+            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
+            <td><SignaturePad /></td>
+            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
             
           </tr>
           <tr>
@@ -42,145 +124,64 @@ function App() {
             <td><input type="text" placeholder="Meeting name here" /></td>
             <td><input type="text" placeholder="address" /></td>
             <td><SignaturePad /></td>
-            <td><input type="text" placeholder="How it affected me" /></td>
+            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
             
           </tr>
           <tr>
             <td><input type="text" placeholder="DATE" /></td>
             <td><input type="text" placeholder="TIME 7pm?  "/></td>
             <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><input type="text" placeholder="address" /></td>
+            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
             <td><SignaturePad /></td>
-            <td><input type="text" placeholder="How it affected me" /></td>
+            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
             
           </tr>
           <tr>
             <td><input type="text" placeholder="DATE" /></td>
             <td><input type="text" placeholder="TIME 7pm?  "/></td>
             <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><input type="text" placeholder="address" /></td>
+            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
             <td><SignaturePad /></td>
-            <td><input type="text" placeholder="How it affected me" /></td>
+            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
             
           </tr>
           <tr>
             <td><input type="text" placeholder="DATE" /></td>
             <td><input type="text" placeholder="TIME 7pm?  "/></td>
             <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><input type="text" placeholder="address" /></td>
+            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
             <td><SignaturePad /></td>
-            <td><input type="text" placeholder="How it affected me" /></td>
+            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
             
           </tr>
           <tr>
             <td><input type="text" placeholder="DATE" /></td>
             <td><input type="text" placeholder="TIME 7pm?  "/></td>
             <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><input type="text" placeholder="address" /></td>
+            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
             <td><SignaturePad /></td>
-            <td><input type="text" placeholder="How it affected me" /></td>
+            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
             
           </tr>
           <tr>
             <td><input type="text" placeholder="DATE" /></td>
             <td><input type="text" placeholder="TIME 7pm?  "/></td>
             <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><input type="text" placeholder="address" /></td>
+            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
             <td><SignaturePad /></td>
-            <td><input type="text" placeholder="How it affected me" /></td>
+            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
             
           </tr>
           <tr>
             <td><input type="text" placeholder="DATE" /></td>
             <td><input type="text" placeholder="TIME 7pm?  "/></td>
             <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><input type="text" placeholder="address" /></td>
+            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
             <td><SignaturePad /></td>
-            <td><input type="text" placeholder="How it affected me" /></td>
+            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
             
           </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><input type="text" placeholder="address" /></td>
-            <td><SignaturePad /></td>
-            <td><input type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><input type="text" placeholder="address" /></td>
-            <td><SignaturePad /></td>
-            <td><input type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><input type="text" placeholder="address" /></td>
-            <td><SignaturePad /></td>
-            <td><input type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><input type="text" placeholder="address" /></td>
-            <td><SignaturePad /></td>
-            <td><input type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><input type="text" placeholder="address" /></td>
-            <td><SignaturePad /></td>
-            <td><input type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><input type="text" placeholder="address" /></td>
-            <td><SignaturePad /></td>
-            <td><input type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><input type="text" placeholder="address" /></td>
-            <td><SignaturePad /></td>
-            <td><input type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><input type="text" placeholder="address" /></td>
-            <td><SignaturePad /></td>
-            <td><input type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><input type="text" placeholder="address" /></td>
-            <td><SignaturePad /></td>
-            <td><input type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          {/* Add more rows as needed */}
+          
         </tbody>
       </table>
 
