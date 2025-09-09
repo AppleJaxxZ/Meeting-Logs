@@ -1,26 +1,31 @@
 import React, { useRef, useState } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
-import './SignaturePad.css'
+import './SignaturePad.css';
 
 function SignaturePad() {
   const sigRef = useRef();
   const [isLocked, setIsLocked] = useState(false);
 
   const clear = () => {
-    if (!isLocked) {
-        sigRef.current.clear(); // if its not locked then clear the pad.
+    if (!isLocked && sigRef.current) {
+      sigRef.current.clear();
     }
-    
   };
+
   const lock = () => {
-    setIsLocked(true);
-    sigRef.current.off(); //disables drawing
-  }
+    if (sigRef.current) {
+      sigRef.current.off(); // disables drawing
+      setIsLocked(true);
+    }
+  };
 
   const unlock = () => {
-    setIsLocked(false);
-    sigRef.current.on(); //enables drawing
-  }
+    if (sigRef.current) {
+      sigRef.current.on(); // enables drawing
+      setIsLocked(false);
+    }
+  };
+
   return (
     <div className="signature-wrapper">
       <SignatureCanvas
@@ -29,8 +34,11 @@ function SignaturePad() {
         canvasProps={{ className: 'signature-canvas' }}
       />
       <button onClick={clear} disabled={isLocked}>Clear</button>
-      {isLocked ? (<button onClick={unlock}>Clear</button>) :( <button onClick={lock}>Lock</button>)}
-      
+      {isLocked ? (
+        <button onClick={unlock}>Unlock</button>
+      ) : (
+        <button onClick={lock}>Lock</button>
+      )}
     </div>
   );
 }

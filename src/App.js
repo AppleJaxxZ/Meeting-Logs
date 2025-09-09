@@ -1,191 +1,93 @@
-import SignaturePad from './SignaturePad';
-import CurrentAddressButton from './CurrentAddressButton';
+import React, { useState, useEffect, useRef } from 'react';
+import html2canvas from 'html2canvas';
+import AttendanceRow from './AttendanceRow';
 import './index.css';
 
 function App() {
+  const [name, setName] = useState('');
+  const [dateRange, setDateRange] = useState('');
+  const [rows, setRows] = useState(() => {
+    const saved = localStorage.getItem('attendanceRows');
+    return saved ? JSON.parse(saved) : Array(16).fill().map(() => ({
+      date: '',
+      time: '',
+      meetingName: '',
+      location: '',
+      impact: ''
+    }));
+  });
+
+  const sheetRef = useRef(); // Ref for capturing the sheet
+
+  useEffect(() => {
+    localStorage.setItem('attendanceRows', JSON.stringify(rows));
+  }, [rows]);
+
+  const updateRow = (index, newData) => {
+    const updated = [...rows];
+    updated[index] = newData;
+    setRows(updated);
+  };
+
+  const captureAndDownload = async () => {
+    if (!sheetRef.current) return;
+
+    const canvas = await html2canvas(sheetRef.current, { scale: 2 });
+    const image = canvas.toDataURL('image/png');
+
+    const link = document.createElement('a');
+    link.href = image;
+    link.download = 'AttendanceSheet.png';
+    link.click();
+  };
+
+  const openEmailClient = () => {
+    const subject = 'AA Attendance Sheet Submission';
+    const body = `Hi Officer,\n\nPlease find my attendance sheet attached as an image.\n\nName: ${name}\nDate Range: ${dateRange}\n\nBest,\nAlex`;
+    window.location.href = `mailto:officer@example.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+ 
   return (
-    <div className="container">
-      <h2>NORTHAMPTON COUNTY RECOVERY COURT SELF-HELP MEETING ATTENDANCE RECORD</h2>
+    <div>
+      <div ref={sheetRef} className="container">
+        <h2>NORTHAMPTON COUNTY RECOVERY COURT SELF-HELP MEETING ATTENDANCE RECORD</h2>
 
-      <div className="form-group">
-        <label>Name</label>
-        <input type="text" placeholder="Enter name" />
+        <div className="form-group">
+          <label>Name</label>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="Enter name" />
+        </div>
+        <div className="form-group">
+          <label>Date Range</label>
+          <input value={dateRange} onChange={e => setDateRange(e.target.value)} placeholder="09-10-2025 to 10-15-2025" />
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Time</th>
+              <th>Meeting Name</th>
+              <th>Location</th>
+              <th>Chair Signature</th>
+              <th>How the Meeting Affected Me</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <AttendanceRow key={i} index={i} rowData={row} updateRow={updateRow} />
+            ))}
+          </tbody>
+        </table>
       </div>
-      <div className="form-group">
-        <label>Date Range</label>
-        <input type="text" placeholder="Enter date 09-10-2025 to 10-15-2025" />
+
+      <div style={{ marginTop: '20px', textAlign: 'center' }}>
+        <button onClick={captureAndDownload} className="submit-button">
+          📸 Save Attendance Sheet as Image
+        </button>
+        <button onClick={openEmailClient} className="submit-button">
+          📧 Email My Officer
+        </button>
       </div>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Time</th>
-            <th>MEETING NAME</th>
-            <th>LOCATION</th>
-            <th>CHAIR SIGNATURE</th>
-            <th>HOW THE MEETING AFFECTED ME</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
-            <td><SignaturePad /></td>
-            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
-            <td><SignaturePad /></td>
-            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
-            <td><SignaturePad /></td>
-            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
-            <td><SignaturePad /></td>
-            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
-            <td><SignaturePad /></td>
-            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
-            <td><SignaturePad /></td>
-            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
-            <td><SignaturePad /></td>
-            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
-            <td><SignaturePad /></td>
-            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
-            <td><SignaturePad /></td>
-            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
-            <td><SignaturePad /></td>
-            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><input type="text" placeholder="address" /></td>
-            <td><SignaturePad /></td>
-            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
-            <td><SignaturePad /></td>
-            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
-            <td><SignaturePad /></td>
-            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
-            <td><SignaturePad /></td>
-            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
-            <td><SignaturePad /></td>
-            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
-            <td><SignaturePad /></td>
-            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          <tr>
-            <td><input type="text" placeholder="DATE" /></td>
-            <td><input type="text" placeholder="TIME 7pm?  "/></td>
-            <td><input type="text" placeholder="Meeting name here" /></td>
-            <td><CurrentAddressButton/><input type="text" placeholder="OR Enter Address Manually" /></td>
-            <td><SignaturePad /></td>
-            <td><textarea rows={5} cols={50} type="text" placeholder="How it affected me" /></td>
-            
-          </tr>
-          
-        </tbody>
-      </table>
-
-      
     </div>
   );
 }
