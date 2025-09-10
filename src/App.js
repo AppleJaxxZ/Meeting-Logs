@@ -4,8 +4,10 @@ import AttendanceRow from './AttendanceRow';
 import './index.css';
 
 function App() {
-  const [name, setName] = useState('');
-  const [dateRange, setDateRange] = useState('');
+  
+  const [name, setName] = useState(() => localStorage.getItem('attendanceName') || '');
+const [dateRange, setDateRange] = useState(() => localStorage.getItem('attendanceDateRange') || '');
+
   const [rows, setRows] = useState(() => {
     const saved = localStorage.getItem('attendanceRows');
     return saved ? JSON.parse(saved) : Array(16).fill().map(() => ({
@@ -18,6 +20,13 @@ function App() {
   });
 
   const sheetRef = useRef(); // Ref for capturing the sheet
+  useEffect(() => {
+    localStorage.setItem('attendanceName', name);
+  }, [name]);
+  
+  useEffect(() => {
+    localStorage.setItem('attendanceDateRange', dateRange);
+  }, [dateRange]);
 
   useEffect(() => {
     localStorage.setItem('attendanceRows', JSON.stringify(rows));

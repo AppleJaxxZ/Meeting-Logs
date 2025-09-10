@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const CurrentAddressButton = () => {
+const CurrentAddressButton = ({onAddressFetched, onClearAddress}) => {
   const initialMessage = 'Click the button to get your current address';
   const [address, setAddress] = useState(initialMessage);
   const [isLoading, setIsLoading] = useState(false);
@@ -78,7 +78,12 @@ const CurrentAddressButton = () => {
     setAddress(initialMessage);
     setError(null);
     setIsLoading(false);
-  }
+
+    if (onClearAddress) {
+      onClearAddress();
+    }
+  
+  };
   const getCurrentAddress = async () => {
     setIsLoading(true);
     setError(null);
@@ -110,9 +115,14 @@ const CurrentAddressButton = () => {
 
       // Convert coordinates to address using reverse geocoding
       const addressResult = await reverseGeocode(latitude, longitude);
-      
-      setAddress(`📍 ${addressResult}`);
+      const formatted = `📍 ${addressResult}`;
+      setAddress(formatted);
       setError(null);
+
+      if (onAddressFetched) {
+        onAddressFetched(formatted);
+      }
+    
 
     } catch (error) {
       console.error('Error getting address:', error);
