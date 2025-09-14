@@ -3,9 +3,54 @@ import SignaturePad from './SignaturePad';
 import CurrentAddressButton from './CurrentAddressButton';
 import SignatureCanvas from 'react-signature-canvas';
 
+
+// Utility: Trim transparent edges from canvas
+const trimCanvas = (canvas) => {
+  const ctx = canvas.getContext('2d');
+  const { width, height } = canvas;
+  const imageData = ctx.getImageData(0, 0, width, height);
+
+  let top = null, bottom = null, left = null, right = null;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const alpha = imageData.data[(y * width + x) * 4 + 3];
+      if (alpha > 0) {
+        top ??= y;
+        bottom = y;
+        left = left === null ? x : Math.min(left, x);
+        right = right === null ? x : Math.max(right, x);
+      }
+    }
+  }
+
+  if (top === null) return null;
+
+  const trimmedWidth = right - left + 1;
+  const trimmedHeight = bottom - top + 1;
+  const trimmedData = ctx.getImageData(left, top, trimmedWidth, trimmedHeight);
+
+  const trimmedCanvas = document.createElement('canvas');
+  trimmedCanvas.width = trimmedWidth;
+  trimmedCanvas.height = trimmedHeight;
+  trimmedCanvas.getContext('2d').putImageData(trimmedData, 0, 0);
+
+  return trimmedCanvas;
+};
+
 function AttendanceRow({ index, rowData, updateRow }) {
   const [isSigning, setIsSigning] = useState(false);
+
+  const [savedSignature, setSavedSignature] = useState(null);
   const sigRef = useRef();
+  const fullScreenSigRef = useRef();
+
+
+const handleActivateSignature = () => {
+  setIsSigning(true); // Let SignaturePad handle locking internally
+};
+
+
 
   const handleChange = (field, value) => {
     updateRow(index, { ...rowData, [field]: value });
@@ -19,19 +64,42 @@ function AttendanceRow({ index, rowData, updateRow }) {
     handleChange('location', '');
   };
 
+
   const saveSignature = () => {
-    if (sigRef.current && !sigRef.current.isEmpty()) {
-      const dataURL = sigRef.current.getCanvas().toDataURL('image/png');
-      localStorage.setItem(`signature-${index}`, dataURL);
+    if (fullScreenSigRef.current && !fullScreenSigRef.current.isEmpty()) {
+      console.log('fullScreenSigRef.current:', fullScreenSigRef.current); // 👈 Add this line
+      console.log('Available methods:', Object.keys(fullScreenSigRef.current));
+      const rawCanvas = fullScreenSigRef.current.getCanvas();
+      const canvas = trimCanvas(rawCanvas);
+            const dataURL = canvas.toDataURL('image/png');
+      const width = canvas.width;
+      const height = canvas.height;
+  
+      const payload = JSON.stringify({ dataURL, width, height });
+      localStorage.setItem(`signature-${index}`, payload);
+      setSavedSignature({ dataURL, width, height });
     }
   };
+  
+  
 
-  useEffect(() => {
-    const saved = localStorage.getItem(`signature-${index}`);
-    if (saved && sigRef.current) {
-      sigRef.current.fromDataURL(saved);
+useEffect(() => {
+  if (savedSignature && sigRef.current) {
+    sigRef.current.fromDataURL(savedSignature);
+  }
+}, [savedSignature]);
+
+useEffect(() => {
+  const saved = localStorage.getItem(`signature-${index}`);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      setSavedSignature(parsed);
+    } catch (err) {
+      console.error('Invalid signature data:', err);
     }
-  }, [index]);
+  }
+}, [index]);
 
   return (
     <>
@@ -68,10 +136,12 @@ function AttendanceRow({ index, rowData, updateRow }) {
           />
         </td>
         <td>
-          <div onClick={() => setIsSigning(true)}>
-            <SignaturePad index={index} />
-          </div>
-        </td>
+          
+        <SignaturePad index={index} onActivate={handleActivateSignature} savedSignature={savedSignature} />
+
+</td>
+
+        
         <td>
           <textarea
             rows={5}
@@ -97,7 +167,7 @@ function AttendanceRow({ index, rowData, updateRow }) {
           alignItems: 'center'
         }}>
           <SignatureCanvas
-            ref={sigRef}
+            ref={fullScreenSigRef}
             penColor="black"
             canvasProps={{
               width: window.innerWidth,
@@ -105,6 +175,7 @@ function AttendanceRow({ index, rowData, updateRow }) {
               style: { backgroundColor: 'white' }
             }}
           />
+          
           <button
             onClick={() => {
               saveSignature();
