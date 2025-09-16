@@ -59,7 +59,7 @@ function SignaturePad({ index, onActivate, savedSignature }) {
   useLayoutEffect(() => {
     if (!savedSignature || !sigRef.current) return;
 
-    const { dataURL, width = 300, height = 150 } = savedSignature;
+    const { dataURL } = savedSignature;
     const canvas = sigRef.current.getCanvas();
     const context = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
