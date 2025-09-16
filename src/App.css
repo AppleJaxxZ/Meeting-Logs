@@ -1,38 +1,266 @@
-.App {
-  text-align: center;
+/* === Base Reset === */
+body {
+  margin: 0;
+  padding: 10px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f9f9f9;
+  color: #333;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+/* === Container === */
+.container {
+  max-width: 900px;
+  margin: auto;
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+.address-status {
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: #555;
+  font-style: italic;
+  word-break: break-word;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+/* === Form Groups === */
+.form-group {
+  margin-bottom: 16px;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+
+label {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 6px;
+  font-size: 1rem;
+}
+
+/* === Inputs === */
+input {
+  font-size: 1rem;
+  padding: 10px 12px;
+  line-height: 1.5;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-family: inherit;
+  letter-spacing: 0.4px;
+  width: 100%;
+  min-width: 120px;
+  box-sizing: border-box;
+}
+
+/* === Textareas === */
+textarea {
+  font-size: 1rem;
+  padding: 10px 12px;
+  line-height: 1.5;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-family: inherit;
+  letter-spacing: 0.4px;
+  width: 100%;
+  min-height: 40px;
+  resize: none;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* === Location Cell === */
+.location-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+/* === Location Textarea === */
+.location-textarea {
+  font-size: 0.95rem;
+  padding: 10px 12px;
+  line-height: 1.4;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-family: inherit;
+  letter-spacing: 0.4px;
+  resize: none;
+  overflow: hidden;
+  width: 100%;
+  min-width: 100px;
+  box-sizing: border-box;
+}
+
+/* === Address Buttons === */
+.address-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.get-address-button,
+.clear-address-button {
+  padding: 6px 12px;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  background-color: #2563eb;
+  color: white;
+  transition: background-color 0.2s ease;
+}
+
+.clear-address-button {
+  background-color: #aaa;
+}
+
+.get-address-button:hover {
+  background-color: #1e40af;
+}
+
+.clear-address-button:hover {
+  background-color: #666;
+}
+
+.get-address-button:disabled,
+.clear-address-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* === Table === */
+.table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  margin-top: 20px;
+}
+
+th,
+td {
+  border: 1px solid #ccc;
+  padding: 10px;
+  text-align: left;
+  vertical-align: top;
+  width: 16.66%;
+  overflow-wrap: break-word;
+}
+
+th {
+  background-color: #f3f4f6;
+  font-weight: 600;
+}
+
+tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+/* === Buttons === */
+button.submit-button {
+  padding: 10px 16px;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background-color: #2563eb;
+  color: white;
+  transition: background-color 0.2s ease;
+  margin: 0 8px;
+}
+
+button.submit-button:hover {
+  background-color: #1e40af;
+}
+
+button.submit-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* === Signature Pad === */
+.signature-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 8px;
+}
+
+.signature-canvas {
+  width: 240px;
+  height: 80px;
+  border: 1px solid #aaa;
+  border-radius: 8px;
+  background-color: white;
+  touch-action: none;
+}
+
+.signature-controls {
+  display: flex;
+  gap: 8px;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
 }
 
-.App-link {
-  color: #61dafb;
+/* === Responsive Table Stack === */
+@media (max-width: 720px) {
+  table,
+  thead,
+  tbody,
+  th,
+  td,
+  tr {
+    display: block;
+  }
+
+  thead {
+    display: none;
+  }
+
+  tr {
+    margin-bottom: 16px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    padding: 12px;
+  }
+
+  td {
+    display: grid;
+    grid-template-columns: 40% 1fr;
+    padding: 8px 0;
+    border: none;
+  }
+
+  td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #555;
+    padding-right: 10px;
+  }
+
+  input,
+  textarea {
+    width: 100%;
+    font-size: 0.95rem;
+  }
+
+  .address-buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* === Utility === */
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }

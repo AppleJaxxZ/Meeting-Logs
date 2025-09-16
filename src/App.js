@@ -80,6 +80,13 @@ const captureAndDownload = async () => {
           <label>Date Range</label>
           <input value={dateRange} onChange={e => setDateRange(e.target.value)} placeholder="09-10-2025 to 10-15-2025" />
         </div>
+        <div className="form-group">
+          <label>IMPORTANT</label>
+          <p> 📝 Note: Your browser will ask for location permission. If you don't see a prompt, check your browser's address bar for a location icon.
+          </p>
+          
+        </div>
+
 
         <table>
           <thead>

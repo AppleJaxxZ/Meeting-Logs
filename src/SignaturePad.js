@@ -64,13 +64,25 @@ function SignaturePad({ index, onActivate, savedSignature }) {
     const context = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
 
-    canvas.width = width;
-    canvas.height = height;
-    canvas.style.width = `${width / dpr}px`;
-    canvas.style.height = `${height / dpr}px`;
+    const targetWidth = 150;  // desired visual width in CSS pixels
+const targetHeight = 102;  // desired visual height
 
-    context.setTransform(1, 0, 0, 1, 0, 0);
-    context.scale(dpr, dpr);
+canvas.style.width = `${targetWidth}px`;
+canvas.style.height = `${targetHeight}px`;
+
+canvas.width = targetWidth * dpr;
+canvas.height = targetHeight * dpr;
+
+context.setTransform(1, 0, 0, 1, 0, 0);
+context.scale(dpr, dpr);
+
+// Draw the saved image scaled to fit
+const img = new Image();
+img.onload = () => {
+  context.drawImage(img, 0, 0, targetWidth, targetHeight);
+};
+img.src = dataURL;
+
 
     sigRef.current.fromDataURL(dataURL);
   }, [savedSignature]);

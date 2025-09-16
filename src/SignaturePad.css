@@ -28,8 +28,9 @@ button:disabled {
 
 .signature-canvas {
   width: 100%;
-  max-width: 320px;
-  height: 100px;
+  max-width: 140px;
+  height: 102px;
+  max-height: 102px;
   border: 1px solid #aaa;
   border-radius: 8px;
   background-color: white;
