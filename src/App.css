@@ -92,6 +92,7 @@ textarea {
   overflow: hidden;
   width: 100%;
   min-width: 100px;
+  min-height: 150px;
   box-sizing: border-box;
 }
 
@@ -263,4 +264,30 @@ button.submit-button:disabled {
 /* === Utility === */
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
+
+/* === Desktop Capture Styling === */
+.form-capture-desktop {
+  width: 900px;
+  padding: 20px;
+  background: white;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  font-size: 0.95rem;
+  border-radius: 12px;
+  margin: auto;
+}
+
+/* Force desktop layout even on mobile during capture */
+@media screen and (max-width: 720px) {
+  #form-capture {
+    width: 900px !important;
+    transform: scale(1) !important;
+    transform-origin: top left;
+  }
+}
+
+/* === Hide Mobile-Only Elements During Export === */
+.hide-on-export {
+  display: none !important;
 }

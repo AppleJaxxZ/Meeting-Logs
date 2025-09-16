@@ -67,9 +67,9 @@ const captureAndDownload = async () => {
   };
  
   return (
-    <div>
+    <div ref={sheetRef} id="form-capture" className="form-capture-desktop">
      
-      <div ref={sheetRef} className="container">
+      <div className="container">
         <h2>NORTHAMPTON COUNTY RECOVERY COURT SELF-HELP MEETING ATTENDANCE RECORD</h2>
 
         <div className="form-group">
