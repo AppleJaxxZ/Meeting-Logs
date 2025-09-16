@@ -167,6 +167,7 @@ function AttendanceRow({ index, rowData, updateRow }) {
             onChange={e => handleChange('impact', e.target.value)}
             maxLength={30}
             placeholder="How the meeting affected me"
+            style={{minHeight: '100px'}}
             onInput={e => {
               e.target.style.height = 'auto';
               e.target.style.height = `${e.target.scrollHeight}px`;
