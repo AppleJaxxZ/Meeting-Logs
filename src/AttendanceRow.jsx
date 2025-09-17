@@ -184,45 +184,38 @@ function AttendanceRow({ index, rowData, updateRow }) {
       </tr>
 
       {isSigning && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          backgroundColor: 'white',
-          zIndex: 9999,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center'
-        }}>
-          <SignatureCanvas
-            ref={fullScreenSigRef}
-            penColor="black"
-            canvasProps={{
-              width: window.innerWidth,
-              height: window.innerHeight * 0.8,
-              style: { backgroundColor: 'white' }
-            }}
-          />
-          <button
-            onClick={() => {
-              saveSignature();
-              setIsSigning(false);
-            }}
-            style={{
-              marginTop: '20px',
-              padding: '10px 20px',
-              fontSize: '1.2rem',
-              backgroundColor: '#333',
-              color: 'white',
-              borderRadius: '8px'
-            }}
-          >
-            Done
-          </button>
-        </div>
+  <div className="signature-overlay">
+    <div className="signature-frame">
+      <SignatureCanvas
+        ref={fullScreenSigRef}
+        penColor="black"
+        canvasProps={{
+          className: 'signature-canvas-full',
+        }}
+      />
+    </div>
+    <div className="signature-action-buttons">
+      <button
+        onClick={() => {
+          fullScreenSigRef.current.clear();
+        }}
+        className="signature-clear-button"
+      >
+        Clear
+      </button>
+      <button
+        onClick={() => {
+          saveSignature();
+          setIsSigning(false);
+        }}
+        className="signature-done-button-large"
+      >
+        Done
+      </button>
+    </div>
+  </div>
+
+
       )}
     </>
   );
