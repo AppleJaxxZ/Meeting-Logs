@@ -189,7 +189,9 @@ function AttendanceRow({ index, rowData, updateRow }) {
       <SignatureCanvas
         ref={fullScreenSigRef}
         penColor="black"
-        canvasProps={{ className: 'signature-canvas-full' }}
+        canvasProps={{
+          className: 'signature-canvas-full',
+        }}
       />
     </div>
     <div className="signature-action-buttons">
@@ -211,7 +213,6 @@ function AttendanceRow({ index, rowData, updateRow }) {
     </div>
   </div>
 )}
-
 
     </>
   );
