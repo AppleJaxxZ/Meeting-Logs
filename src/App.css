@@ -19,6 +19,19 @@ body {
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
+
+/* === Typography & Labels === */
+label {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 6px;
+  font-size: 1rem;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
 .address-status {
   margin-top: 6px;
   font-size: 0.85rem;
@@ -32,6 +45,100 @@ body {
   margin-bottom: 16px;
 }
 
+/* === Form Elements === */
+input,
+textarea {
+  font-size: 1rem;
+  padding: 10px 12px;
+  line-height: 1.5;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-family: inherit;
+  letter-spacing: 0.4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+input {
+  min-width: 120px;
+}
+
+textarea {
+  min-height: 40px;
+  resize: none;      /* auto-resize handled in JS */
+  overflow: hidden;
+}
+
+.location-textarea {
+  font-size: 0.95rem;
+  line-height: 1.4;
+  min-width: 100px;
+  min-height: 150px;
+}
+
+/* === Location Cell === */
+.location-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+.location-display {
+  font-size: 1rem;
+  padding: 10px 12px;
+  line-height: 1.5;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: white;
+  margin-top: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* === Address Buttons === */
+.address-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.get-address-button,
+.clear-address-button {
+  padding: 6px 12px;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  color: white;
+  transition: background-color 0.2s ease;
+}
+
+.get-address-button {
+  background-color: #2563eb;
+}
+
+.clear-address-button {
+  background-color: #aaa;
+}
+
+.get-address-button:hover {
+  background-color: #1e40af;
+}
+
+.clear-address-button:hover {
+  background-color: #666;
+}
+
+.get-address-button:disabled,
+.clear-address-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* === Map Preview / Zoom === */
 .map-popup-wrapper {
   position: relative;
   display: inline-block;
@@ -43,8 +150,16 @@ body {
   height: auto;
   border-radius: 8px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  margin-top: 12px;
   transition: transform 0.3s ease;
   cursor: zoom-in;
+}
+
+.location-map {
+  width: 100%;
+  height: 300px;
+  border-radius: 8px;
+  margin-top: 12px;
 }
 
 .map-popup-zoom {
@@ -64,144 +179,8 @@ body {
   transition: opacity 0.3s ease;
 }
 
-/* Show zoomed image on hover */
 .map-popup-wrapper:hover .map-popup-zoom {
   display: block;
-}
-.location-map {
-  width: 100%;
-  height: 300px;
-  border-radius: 8px;
-  margin-top: 12px;
-}
-.location-map-image {
-  width: 100%;
-  max-width: 600px;
-  height: auto;
-  margin-top: 12px;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-}
-
-.location-display {
-  font-size: 1rem;
-  padding: 10px 12px;
-  line-height: 1.5;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-family: inherit;
-  letter-spacing: 0.4px;
-  width: 100%;
-  white-space: pre-wrap;
-  word-break: break-word;
-  box-sizing: border-box;
-  background-color: white;
-  margin-top: 8px;
-}
-
-
-.hide-on-export {
-  display: none;
-}
-label {
-  font-weight: 600;
-  display: block;
-  margin-bottom: 6px;
-  font-size: 1rem;
-}
-
-/* === Inputs === */
-input {
-  font-size: 1rem;
-  padding: 10px 12px;
-  line-height: 1.5;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-family: inherit;
-  letter-spacing: 0.4px;
-  width: 100%;
-  min-width: 120px;
-  box-sizing: border-box;
-}
-
-/* === Textareas === */
-textarea {
-  font-size: 1rem;
-  padding: 10px 12px;
-  line-height: 1.5;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-family: inherit;
-  letter-spacing: 0.4px;
-  width: 100%;
-  min-height: 40px;
-  resize: none;
-  overflow: hidden;
-  box-sizing: border-box;
-}
-
-/* === Location Cell === */
-.location-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-width: 100%;
-  overflow-wrap: break-word;
-}
-
-/* === Location Textarea === */
-.location-textarea {
-  font-size: 0.95rem;
-  padding: 10px 12px;
-  line-height: 1.4;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-family: inherit;
-  letter-spacing: 0.4px;
-  resize: none;
-  overflow: hidden;
-  width: 100%;
-  min-width: 100px;
-  min-height: 150px;
-  box-sizing: border-box;
-}
-
-/* === Address Buttons === */
-.address-buttons {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 6px;
-}
-
-.get-address-button,
-.clear-address-button {
-  padding: 6px 12px;
-  font-size: 0.9rem;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  background-color: #2563eb;
-  color: white;
-  transition: background-color 0.2s ease;
-}
-
-.clear-address-button {
-  background-color: #aaa;
-}
-
-.get-address-button:hover {
-  background-color: #1e40af;
-}
-
-.clear-address-button:hover {
-  background-color: #666;
-}
-
-.get-address-button:disabled,
-.clear-address-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 /* === Table === */
@@ -237,7 +216,7 @@ tr:nth-child(even) {
   background-color: #fafafa;
 }
 
-/* === Buttons === */
+/* === Primary Buttons === */
 button.submit-button {
   padding: 10px 16px;
   font-size: 1rem;
@@ -259,8 +238,7 @@ button.submit-button:disabled {
   cursor: not-allowed;
 }
 
-/* === Signature Pad === */
-/* === Signature Pad === */
+/* === Signature Pad (inline) === */
 .signature-wrapper {
   display: flex;
   flex-direction: column;
@@ -291,17 +269,15 @@ button.submit-button:disabled {
   z-index: 9999;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  padding: 16px;
+  padding: 0;
 }
 
 .signature-frame {
+  flex: 1;
   width: 100%;
-  max-width: 100%;
-  height: 80vh;
   border: 4px solid black;
-  border-radius: 12px;
   box-sizing: border-box;
   background-color: white;
   display: flex;
@@ -314,50 +290,47 @@ button.submit-button:disabled {
   height: 100%;
   touch-action: none;
   background-color: white;
-  border-radius: 8px;
 }
 
+.signature-action-buttons {
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  gap: 16px;
+  padding: 16px;
+  background-color: white;
+  border-top: 1px solid #ccc;
+}
+
+.signature-clear-button,
 .signature-done-button-large {
-  margin-top: 20px;
   padding: 14px 28px;
   font-size: 1.4rem;
   font-weight: bold;
-  background-color: #2563eb;
-  color: white;
-  border: none;
   border-radius: 10px;
+  border: none;
   cursor: pointer;
   box-shadow: 0 2px 6px rgba(0,0,0,0.2);
   transition: background-color 0.2s ease;
-}
-.signature-action-buttons {
-  display: flex;
-  gap: 12px;
-  margin-top: 20px;
-  justify-content: center;
 }
 
 .signature-clear-button {
-  padding: 12px 24px;
-  font-size: 1.4rem;
-  font-weight: bold;
   background-color: #aaa;
   color: white;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-  transition: background-color 0.2s ease;
 }
 
 .signature-clear-button:hover {
   background-color: #666;
 }
 
+.signature-done-button-large {
+  background-color: #2563eb;
+  color: white;
+}
+
 .signature-done-button-large:hover {
   background-color: #1e40af;
 }
-
 
 /* === Responsive Table Stack === */
 @media (max-width: 720px) {
@@ -406,13 +379,14 @@ button.submit-button:disabled {
     flex-direction: column;
     align-items: stretch;
   }
-}
 
-/* === Utility === */
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+  /* Stack the signature action buttons on smaller screens for easier tapping */
+  .signature-action-buttons {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
 }
-
 
 /* === Desktop Capture Styling === */
 .form-capture-desktop {
@@ -434,7 +408,7 @@ code {
   }
 }
 
-/* === Hide Mobile-Only Elements During Export === */
+/* === Utility / Export === */
 .hide-on-export {
   display: none !important;
 }

@@ -196,9 +196,7 @@ function AttendanceRow({ index, rowData, updateRow }) {
     </div>
     <div className="signature-action-buttons">
       <button
-        onClick={() => {
-          fullScreenSigRef.current.clear();
-        }}
+        onClick={() => fullScreenSigRef.current.clear()}
         className="signature-clear-button"
       >
         Clear
@@ -214,9 +212,8 @@ function AttendanceRow({ index, rowData, updateRow }) {
       </button>
     </div>
   </div>
+)}
 
-
-      )}
     </>
   );
 }
