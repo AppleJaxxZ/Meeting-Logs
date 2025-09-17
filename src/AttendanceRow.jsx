@@ -140,16 +140,23 @@ function AttendanceRow({ index, rowData, updateRow }) {
     onAddressFetched={handleAddressUpdate}
     onClearAddress={handleAddressClear}
   />
-  <textarea
-    className="location-textarea"
-    value={rowData.location}
-    onChange={e => handleChange('location', e.target.value)}
-    maxLength={100}
-    placeholder="📍 Your current address"
-    onInput={e => {
-      e.target.style.height = 'auto';
-      e.target.style.height = `${e.target.scrollHeight}px`;
-    }}
+ {/* Display-only version for snapshot */}
+<div className="location-display hide-on-export">
+  {rowData.location}
+</div>
+
+{/* Editable textarea for user input */}
+<textarea
+  className="location-textarea"
+  value={rowData.location}
+  onChange={e => handleChange('location', e.target.value)}
+  maxLength={100}
+  placeholder="📍 Your current address"
+  onInput={e => {
+    e.target.style.height = 'auto';
+    e.target.style.height = `${e.target.scrollHeight}px`;
+  }}
+
    
   />
 </td>

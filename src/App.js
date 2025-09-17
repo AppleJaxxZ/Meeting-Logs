@@ -44,16 +44,22 @@ const [dateRange, setDateRange] = useState(() => localStorage.getItem('attendanc
 const captureAndDownload = async () => {
   if (!sheetRef.current) return;
 
-  const canvas = await html2canvas(sheetRef.current, { scale: 2 });
-  const imgData = canvas.toDataURL('image/png');
+  document.querySelectorAll('.location-display').forEach(el => el.classList.remove('hide-on-export'));
+document.querySelectorAll('.location-textarea').forEach(el => el.classList.add('hide-on-export'));
+
+const canvas = await html2canvas(sheetRef.current, { scale: 1.5, useCORS: true });
+
+document.querySelectorAll('.location-display').forEach(el => el.classList.add('hide-on-export'));
+document.querySelectorAll('.location-textarea').forEach(el => el.classList.remove('hide-on-export'));
+  const imgData = canvas.toDataURL('image/jpeg', 0.6);
 
   const pdf = new jsPDF({
     orientation: 'portrait',
     unit: 'px',
-    format: [canvas.width, canvas.height],
+    format: [canvas.width * 0.8, canvas.height * 0.8],
   });
 
-  pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+  pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
   pdf.save('AttendanceSheet.pdf');
   alert('✅ PDF saved as "AttendanceSheet.pdf". Please attach it manually to your email before sending.');
 };

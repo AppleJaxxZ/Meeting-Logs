@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 const CurrentAddressButton = ({ onAddressFetched, onClearAddress }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+  const [mapUrl, setMapUrl] = useState('');
 
   const getCurrentPosition = () => {
     return new Promise((resolve, reject) => {
@@ -63,6 +64,7 @@ const CurrentAddressButton = ({ onAddressFetched, onClearAddress }) => {
   const getCurrentAddress = async () => {
     setIsLoading(true);
     setStatusMessage('📡 Fetching your current location...');
+    setMapUrl('');
 
     try {
       if (!navigator.geolocation) {
@@ -80,7 +82,6 @@ const CurrentAddressButton = ({ onAddressFetched, onClearAddress }) => {
       const { latitude, longitude } = position.coords;
 
       setStatusMessage('📍 Converting coordinates to address...');
-
       const addressResult = await reverseGeocode(latitude, longitude);
       const formatted = `📍 ${addressResult}`;
 
@@ -88,7 +89,10 @@ const CurrentAddressButton = ({ onAddressFetched, onClearAddress }) => {
         onAddressFetched(formatted);
       }
 
-      setStatusMessage('✅ Address loaded, if incorrect, enter manually');
+      const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${latitude},${longitude}&zoom=17&size=600x300&markers=color:red%7C${latitude},${longitude}&key=${process.env.REACT_APP_GOOGLE_MAPS_API_KEY}`;
+      setMapUrl(staticMapUrl);
+
+      setStatusMessage('✅ Address loaded');
     } catch (error) {
       console.error('Error getting address:', error);
       const errorMsg = `❌ ${error.message}`;
@@ -103,6 +107,7 @@ const CurrentAddressButton = ({ onAddressFetched, onClearAddress }) => {
 
   const resetAddress = () => {
     setStatusMessage('');
+    setMapUrl('');
     if (onClearAddress) {
       onClearAddress();
     }
@@ -124,9 +129,26 @@ const CurrentAddressButton = ({ onAddressFetched, onClearAddress }) => {
       >
         Clear
       </button>
-      {statusMessage && (
-        <div className="address-status">{statusMessage}</div>
+
+      {mapUrl && (
+        <div className="map-popup-wrapper">
+          <img
+            src={mapUrl}
+            alt="Map of current location"
+            className="location-map-image"
+            crossOrigin='anonymous'
+          />
+          <div className="map-popup-zoom">
+            <img
+              src={mapUrl}
+              alt="Zoomed map"
+              className="location-map-zoomed"
+            />
+          </div>
+        </div>
       )}
+
+      {statusMessage && <div className="address-status">{statusMessage}</div>}
     </div>
   );
 };
