@@ -275,8 +275,8 @@ button.submit-button:disabled {
 }
 
 .signature-frame {
+  flex: 1;
   width: 100%;
-  height: calc(100vh - 120px); /* dynamic height based on viewport */
   border: 4px solid black;
   box-sizing: border-box;
   background-color: white;
@@ -380,30 +380,15 @@ button.submit-button:disabled {
     align-items: stretch;
   }
 
-  /* Inline pad should expand on mobile for easier signing inline */
   .signature-canvas {
     width: 100%;
     height: 100px;
   }
-
   /* Stack the signature action buttons on smaller screens for easier tapping */
   .signature-action-buttons {
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
-  }
-}
-
-/* Allow for very short viewports */
-@media (max-height: 500px) {
-  .signature-frame {
-    height: calc(100vh - 100px);
-  }
-
-  .signature-clear-button,
-  .signature-done-button-large {
-    font-size: 1.2rem;
-    padding: 12px 20px;
   }
 }
 
