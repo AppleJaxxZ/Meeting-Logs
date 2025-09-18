@@ -1,6 +1,6 @@
 import React, { useRef, useState, useLayoutEffect } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
-import './SignaturePad.css';
+import './App.css';
 
 // Utility: Trim transparent edges from canvas
 const trimCanvas = (canvas) => {
