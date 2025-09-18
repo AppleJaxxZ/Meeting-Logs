@@ -5,6 +5,16 @@ import jsPDF from 'jspdf';
 import './index.css';
 
 function App() {
+
+  // Set --vh custom property to match actual viewport height
+const setViewportHeight = () => {
+  const vh = window.innerHeight * 0.01;
+  document.documentElement.style.setProperty('--vh', `${vh}px`);
+};
+
+window.addEventListener('resize', setViewportHeight);
+setViewportHeight();
+
   
   const [name, setName] = useState(() => localStorage.getItem('attendanceName') || '');
 const [dateRange, setDateRange] = useState(() => localStorage.getItem('attendanceDateRange') || '');
