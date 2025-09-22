@@ -39,7 +39,6 @@ const trimCanvas = (canvas) => {
 function SignaturePad({ index, onActivate, savedSignature }) {
   const sigRef = useRef();
   const [isLocked, setIsLocked] = useState(false);
-  const [signatureImage, setSignatureImage] = useState(null);
 
   // Save trimmed signature to localStorage
   const saveSignature = () => {
@@ -54,44 +53,49 @@ function SignaturePad({ index, onActivate, savedSignature }) {
     const payload = JSON.stringify({ dataURL, width, height });
 
     localStorage.setItem(`signature-${index}`, payload);
-    setSignatureImage(dataURL);
   };
 
-  // Restore saved signature with proper scaling
+  // Restore saved signature with proper scaling for small box
   useLayoutEffect(() => {
     if (!savedSignature || !sigRef.current) return;
 
     const { dataURL, width: origWidth, height: origHeight } = savedSignature;
-    setSignatureImage(dataURL);
-    
     const canvas = sigRef.current.getCanvas();
     const context = canvas.getContext('2d');
     
-    // Clear the canvas first
-    context.clearRect(0, 0, canvas.width, canvas.height);
+    // Get the display dimensions (CSS pixels)
+    const displayWidth = 240;  // max-width from CSS
+    const displayHeight = 80;   // height from CSS
     
-    // Create image and draw it scaled to fit
+    // Set canvas internal dimensions to match display size * DPR for clarity
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = displayWidth * dpr;
+    canvas.height = displayHeight * dpr;
+    
+    // Scale context to match DPR
+    context.scale(dpr, dpr);
+    
+    // Clear the canvas
+    context.clearRect(0, 0, displayWidth, displayHeight);
+    
+    // Load and draw the signature
     const img = new Image();
     img.onload = () => {
-      // Get the actual canvas dimensions
-      const canvasWidth = canvas.width;
-      const canvasHeight = canvas.height;
-      
-      // Calculate scaling to fit signature in canvas with padding
+      // Calculate scaling to fit signature in display area with padding
       const padding = 10;
-      const availableWidth = canvasWidth - (padding * 2);
-      const availableHeight = canvasHeight - (padding * 2);
+      const availableWidth = displayWidth - (padding * 2);
+      const availableHeight = displayHeight - (padding * 2);
       
       const scaleX = availableWidth / origWidth;
       const scaleY = availableHeight / origHeight;
-      const scale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down if needed
+      const scale = Math.min(scaleX, scaleY);
       
       const scaledWidth = origWidth * scale;
       const scaledHeight = origHeight * scale;
       
       // Center the signature
-      const x = (canvasWidth - scaledWidth) / 2;
-      const y = (canvasHeight - scaledHeight) / 2;
+      const x = (displayWidth - scaledWidth) / 2;
+      const y = (displayHeight - scaledHeight) / 2;
       
       // Draw the scaled signature
       context.drawImage(img, x, y, scaledWidth, scaledHeight);
@@ -103,7 +107,13 @@ function SignaturePad({ index, onActivate, savedSignature }) {
     if (!isLocked && sigRef.current) {
       sigRef.current.clear();
       localStorage.removeItem(`signature-${index}`);
-      setSignatureImage(null);
+      
+      // Reset canvas dimensions
+      const canvas = sigRef.current.getCanvas();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = 240 * dpr;
+      canvas.height = 80 * dpr;
+      canvas.getContext('2d').scale(dpr, dpr);
     }
   };
 
@@ -120,53 +130,19 @@ function SignaturePad({ index, onActivate, savedSignature }) {
 
   return (
     <div className="signature-wrapper">
-      <div style={{ position: 'relative', width: '100%', maxWidth: '240px' }}>
-        <SignatureCanvas
-          ref={sigRef}
-          penColor="black"
-          onBegin={() => {
-            if (!isLocked && typeof onActivate === 'function') {
-              onActivate();
-            }
-          }}
-          canvasProps={{
-            className: 'signature-canvas',
-            style: { 
-              backgroundColor: 'white',
-              display: signatureImage && isLocked ? 'none' : 'block'
-            }
-          }}
-        />
-        
-        {/* Display the signature as an image when locked */}
-        {signatureImage && isLocked && (
-          <div 
-            style={{
-              width: '100%',
-              maxWidth: '240px',
-              height: '80px',
-              border: '1px solid #aaa',
-              borderRadius: '8px',
-              backgroundColor: 'white',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '5px',
-              boxSizing: 'border-box'
-            }}
-          >
-            <img 
-              src={signatureImage} 
-              alt="Signature"
-              style={{
-                maxWidth: '100%',
-                maxHeight: '100%',
-                objectFit: 'contain'
-              }}
-            />
-          </div>
-        )}
-      </div>
+      <SignatureCanvas
+        ref={sigRef}
+        penColor="black"
+        onBegin={() => {
+          if (!isLocked && typeof onActivate === 'function') {
+            onActivate();
+          }
+        }}
+        canvasProps={{
+          className: 'signature-canvas',
+          style: { backgroundColor: 'white' }
+        }}
+      />
 
       <div className="signature-controls">
         <button onClick={clearSignature} disabled={isLocked}>Clear</button>
