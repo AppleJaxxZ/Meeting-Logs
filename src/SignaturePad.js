@@ -1,4 +1,4 @@
-import React, { useRef, useState, useLayoutEffect } from 'react';
+import React, { useRef, useState, useLayoutEffect, useEffect } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
 import './App.css';
 
@@ -39,6 +39,7 @@ const trimCanvas = (canvas) => {
 function SignaturePad({ index, onActivate, savedSignature }) {
   const sigRef = useRef();
   const [isLocked, setIsLocked] = useState(false);
+  const [forceRedraw, setForceRedraw] = useState(0);
 
   // Save trimmed signature to localStorage
   const saveSignature = () => {
@@ -55,75 +56,108 @@ function SignaturePad({ index, onActivate, savedSignature }) {
     localStorage.setItem(`signature-${index}`, payload);
   };
 
-  // Function to redraw signature
-  const redrawSignature = () => {
+  // Function to draw signature on canvas
+  const drawSignatureOnCanvas = () => {
     if (!savedSignature || !sigRef.current) return;
 
-    const { dataURL, width: origWidth, height: origHeight } = savedSignature;
-    const canvas = sigRef.current.getCanvas();
-    const context = canvas.getContext('2d');
-    
-    // Get the actual display dimensions
-    const rect = canvas.getBoundingClientRect();
-    const displayWidth = rect.width || 240;
-    const displayHeight = rect.height || 80;
-    
-    // Set canvas internal dimensions to match display size * DPR for clarity
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = displayWidth * dpr;
-    canvas.height = displayHeight * dpr;
-    
-    // Scale context to match DPR
-    context.scale(dpr, dpr);
-    
-    // Clear the canvas
-    context.clearRect(0, 0, displayWidth, displayHeight);
-    
-    // Load and draw the signature
-    const img = new Image();
-    img.onload = () => {
-      // Calculate scaling to fit signature in display area with padding
-      const padding = 10;
-      const availableWidth = displayWidth - (padding * 2);
-      const availableHeight = displayHeight - (padding * 2);
+    try {
+      const { dataURL, width: origWidth, height: origHeight } = savedSignature;
+      const canvas = sigRef.current.getCanvas();
       
-      const scaleX = availableWidth / origWidth;
-      const scaleY = availableHeight / origHeight;
-      const scale = Math.min(scaleX, scaleY);
+      if (!canvas) return;
       
-      const scaledWidth = origWidth * scale;
-      const scaledHeight = origHeight * scale;
+      const context = canvas.getContext('2d');
       
-      // Center the signature
-      const x = (displayWidth - scaledWidth) / 2;
-      const y = (displayHeight - scaledHeight) / 2;
-      
-      // Draw the scaled signature
-      context.drawImage(img, x, y, scaledWidth, scaledHeight);
-    };
-    img.src = dataURL;
+      // Wait for next frame to ensure canvas is ready
+      requestAnimationFrame(() => {
+        // Get the actual display dimensions
+        const rect = canvas.getBoundingClientRect();
+        const displayWidth = rect.width || 240;
+        const displayHeight = rect.height || 80;
+        
+        // Set canvas internal dimensions to match display size * DPR for clarity
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = displayWidth * dpr;
+        canvas.height = displayHeight * dpr;
+        
+        // Ensure canvas style dimensions match
+        canvas.style.width = displayWidth + 'px';
+        canvas.style.height = displayHeight + 'px';
+        
+        // Scale context to match DPR
+        context.scale(dpr, dpr);
+        
+        // Clear the canvas
+        context.clearRect(0, 0, displayWidth, displayHeight);
+        
+        // Load and draw the signature
+        const img = new Image();
+        img.onload = () => {
+          // Calculate scaling to fit signature in display area with padding
+          const padding = 10;
+          const availableWidth = displayWidth - (padding * 2);
+          const availableHeight = displayHeight - (padding * 2);
+          
+          const scaleX = availableWidth / origWidth;
+          const scaleY = availableHeight / origHeight;
+          const scale = Math.min(scaleX, scaleY);
+          
+          const scaledWidth = origWidth * scale;
+          const scaledHeight = origHeight * scale;
+          
+          // Center the signature
+          const x = (displayWidth - scaledWidth) / 2;
+          const y = (displayHeight - scaledHeight) / 2;
+          
+          // Draw the scaled signature
+          context.drawImage(img, x, y, scaledWidth, scaledHeight);
+        };
+        img.src = dataURL;
+      });
+    } catch (error) {
+      console.error('Error drawing signature:', error);
+    }
   };
 
-  // Restore saved signature with proper scaling for small box
+  // Initial load of saved signature
   useLayoutEffect(() => {
-    redrawSignature();
-  }, [savedSignature]);
+    drawSignatureOnCanvas();
+  }, [savedSignature, forceRedraw]);
 
-  // Handle orientation changes
-  useLayoutEffect(() => {
-    const handleResize = () => {
-      // Small delay to let the DOM update after orientation change
-      setTimeout(() => {
-        redrawSignature();
-      }, 100);
+  // Handle orientation changes and window resizing
+  useEffect(() => {
+    let resizeTimeout;
+    
+    const handleOrientationChange = () => {
+      // Clear any existing timeout
+      clearTimeout(resizeTimeout);
+      
+      // Set a new timeout to redraw after orientation change settles
+      resizeTimeout = setTimeout(() => {
+        setForceRedraw(prev => prev + 1); // Force a redraw
+        drawSignatureOnCanvas();
+      }, 300); // Increased delay to ensure DOM has updated
     };
 
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', handleResize);
+    // Listen for various orientation change events
+    window.addEventListener('resize', handleOrientationChange);
+    window.addEventListener('orientationchange', handleOrientationChange);
+    
+    // Also listen for visibility change (when app comes back to foreground)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        setTimeout(() => {
+          drawSignatureOnCanvas();
+        }, 100);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('orientationchange', handleResize);
+      clearTimeout(resizeTimeout);
+      window.removeEventListener('resize', handleOrientationChange);
+      window.removeEventListener('orientationchange', handleOrientationChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [savedSignature]);
 
@@ -141,6 +175,8 @@ function SignaturePad({ index, onActivate, savedSignature }) {
       
       canvas.width = displayWidth * dpr;
       canvas.height = displayHeight * dpr;
+      canvas.style.width = displayWidth + 'px';
+      canvas.style.height = displayHeight + 'px';
       canvas.getContext('2d').scale(dpr, dpr);
     }
   };
@@ -154,6 +190,10 @@ function SignaturePad({ index, onActivate, savedSignature }) {
   const unlockSignature = () => {
     sigRef.current?.on();
     setIsLocked(false);
+    // Redraw signature when unlocking
+    setTimeout(() => {
+      drawSignatureOnCanvas();
+    }, 50);
   };
 
   return (
@@ -184,4 +224,4 @@ function SignaturePad({ index, onActivate, savedSignature }) {
   );
 }
 
-export default SignaturePad;
+export default SignatureP
