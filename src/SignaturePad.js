@@ -224,4 +224,4 @@ function SignaturePad({ index, onActivate, savedSignature }) {
   );
 }
 
-export default SignatureP
+export default SignaturePad
