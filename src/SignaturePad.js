@@ -55,17 +55,18 @@ function SignaturePad({ index, onActivate, savedSignature }) {
     localStorage.setItem(`signature-${index}`, payload);
   };
 
-  // Restore saved signature with proper scaling for small box
-  useLayoutEffect(() => {
+  // Function to redraw signature
+  const redrawSignature = () => {
     if (!savedSignature || !sigRef.current) return;
 
     const { dataURL, width: origWidth, height: origHeight } = savedSignature;
     const canvas = sigRef.current.getCanvas();
     const context = canvas.getContext('2d');
     
-    // Get the display dimensions (CSS pixels)
-    const displayWidth = 240;  // max-width from CSS
-    const displayHeight = 80;   // height from CSS
+    // Get the actual display dimensions
+    const rect = canvas.getBoundingClientRect();
+    const displayWidth = rect.width || 240;
+    const displayHeight = rect.height || 80;
     
     // Set canvas internal dimensions to match display size * DPR for clarity
     const dpr = window.devicePixelRatio || 1;
@@ -101,6 +102,29 @@ function SignaturePad({ index, onActivate, savedSignature }) {
       context.drawImage(img, x, y, scaledWidth, scaledHeight);
     };
     img.src = dataURL;
+  };
+
+  // Restore saved signature with proper scaling for small box
+  useLayoutEffect(() => {
+    redrawSignature();
+  }, [savedSignature]);
+
+  // Handle orientation changes
+  useLayoutEffect(() => {
+    const handleResize = () => {
+      // Small delay to let the DOM update after orientation change
+      setTimeout(() => {
+        redrawSignature();
+      }, 100);
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
   }, [savedSignature]);
 
   const clearSignature = () => {
@@ -108,11 +132,15 @@ function SignaturePad({ index, onActivate, savedSignature }) {
       sigRef.current.clear();
       localStorage.removeItem(`signature-${index}`);
       
-      // Reset canvas dimensions
+      // Reset canvas dimensions using actual display size
       const canvas = sigRef.current.getCanvas();
+      const rect = canvas.getBoundingClientRect();
+      const displayWidth = rect.width || 240;
+      const displayHeight = rect.height || 80;
       const dpr = window.devicePixelRatio || 1;
-      canvas.width = 240 * dpr;
-      canvas.height = 80 * dpr;
+      
+      canvas.width = displayWidth * dpr;
+      canvas.height = displayHeight * dpr;
       canvas.getContext('2d').scale(dpr, dpr);
     }
   };
