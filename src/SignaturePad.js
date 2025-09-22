@@ -1,4 +1,4 @@
-import React, { useRef, useState, useLayoutEffect, useEffect } from 'react';
+import React, { useRef, useState, useLayoutEffect, useEffect, useCallback } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
 import './App.css';
 
@@ -57,7 +57,7 @@ function SignaturePad({ index, onActivate, savedSignature }) {
   };
 
   // Function to draw signature on canvas
-  const drawSignatureOnCanvas = () => {
+  const drawSignatureOnCanvas = useCallback(() => {
     if (!savedSignature || !sigRef.current) return;
 
     try {
@@ -117,7 +117,7 @@ function SignaturePad({ index, onActivate, savedSignature }) {
     } catch (error) {
       console.error('Error drawing signature:', error);
     }
-  };
+  }, [savedSignature]);
 
   // Initial load of saved signature
   useLayoutEffect(() => {
@@ -224,4 +224,4 @@ function SignaturePad({ index, onActivate, savedSignature }) {
   );
 }
 
-export default SignaturePad
+export default SignaturePad;
