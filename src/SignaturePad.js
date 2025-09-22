@@ -122,7 +122,7 @@ function SignaturePad({ index, onActivate, savedSignature }) {
   // Initial load of saved signature
   useLayoutEffect(() => {
     drawSignatureOnCanvas();
-  }, [savedSignature, forceRedraw]);
+  }, [savedSignature, forceRedraw, drawSignatureOnCanvas]);
 
   // Handle orientation changes and window resizing
   useEffect(() => {
@@ -159,7 +159,7 @@ function SignaturePad({ index, onActivate, savedSignature }) {
       window.removeEventListener('orientationchange', handleOrientationChange);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [savedSignature]);
+  }, [savedSignature, drawSignatureOnCanvas]);
 
   const clearSignature = () => {
     if (!isLocked && sigRef.current) {
