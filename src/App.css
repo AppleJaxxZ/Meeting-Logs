@@ -473,6 +473,17 @@ button.submit-button:disabled {
 /* Force desktop layout during PDF capture */
 .force-desktop-capture {
   width: 900px !important;
+  height: auto !important;
+  overflow: visible !important;
+  position: absolute !important;
+}
+
+.force-desktop-capture .container {
+  max-width: none !important;
+  width: 100% !important;
+  padding: 20px !important;
+  height: auto !important;
+  overflow: visible !important;
 }
 
 .force-desktop-capture table,
