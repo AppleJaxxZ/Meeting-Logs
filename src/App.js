@@ -14,7 +14,7 @@ import {
 } from 'react-router-dom';
 import './index.css';
 
-function MeetingLogPage({ user, name, setName, dateRange, setDateRange, rows, setRows, sheetRef, captureAndDownload, openEmailClient, handleLogout }) {
+function MeetingLogPage({ name, setName, dateRange, setDateRange, rows, setRows, sheetRef, captureAndDownload, openEmailClient, handleLogout }) {
   const updateRow = (index, newData) => {
     const updated = [...rows];
     updated[index] = newData;

@@ -1,4 +1,4 @@
-// src/CurrentAddressButton.jsx
+
 import React, { useState, useEffect } from 'react';
 import { auth } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
