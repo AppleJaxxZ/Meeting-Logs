@@ -66,7 +66,8 @@ function Auth({ onAuthSuccess }) {
     if (!isForgot) {
       if (!formData.password) newErrors.password = 'Password is required';
       else {
-        const strongRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]).{8,20}$/;
+        const strongRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,20}$/;
+
         if (!strongRegex.test(formData.password)) {
           newErrors.password =
             'Password must be 8–20 chars and include uppercase, lowercase, number, and special character.';
