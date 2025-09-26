@@ -10,7 +10,12 @@ import {
   sendEmailVerification,
   deleteUser
 } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, doc, 
+    setDoc, 
+    getDoc, 
+    updateDoc,
+    serverTimestamp,
+    increment } from 'firebase/firestore';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -31,6 +36,24 @@ const auth = getAuth(app);
 
 // Initialize Cloud Firestore and get a reference to the service  
 const db = getFirestore(app);
+
+export const testFirestoreConnection = async () => {
+    try {
+      const testDoc = doc(db, 'test', 'testDoc');
+      await setDoc(testDoc, {
+        message: 'Firestore is working!',
+        timestamp: serverTimestamp()
+      });
+      console.log('✅ Firestore write successful');
+      
+      const readBack = await getDoc(testDoc);
+      console.log('✅ Firestore read successful:', readBack.data());
+      return true;
+    } catch (error) {
+      console.error('❌ Firestore error:', error);
+      return false;
+    }
+  };
 
 // Auth functions
 const registerUser = async (email, password, displayName) => {
@@ -148,5 +171,104 @@ export {
   deleteUser
 };
 
-// Default export if needed
+//Check if user can use location (under 3 uses today)
+// Check if user can use location (under 3 uses today)
+export const checkLocationUsage = async (userId) => {
+    console.log('UserId: ', userId)
+    console.log('auth.currentUser.uid:', auth.currentUser?.uid);
+  if (!userId) {
+    return { allowed: true, remaining: 3 }; // Allow if no user
+  }
+  
+  try {
+    const today = new Date().toDateString();
+    const docRef = doc(db, 'locationUsage', userId);
+    
+    try {
+      const userDoc = await getDoc(docRef);
+      
+      if (!userDoc.exists()) {
+        // First time user - create document
+        await setDoc(docRef, {
+          date: today,
+          count: 0,
+          createdAt: new Date().toISOString()
+        });
+        return { allowed: true, remaining: 3 };
+      }
+      
+      const data = userDoc.data();
+      
+      // Check if it's a new day
+      if (data.date !== today) {
+        await updateDoc(docRef, {
+          date: today,
+          count: 0
+        });
+        return { allowed: true, remaining: 3 };
+      }
+      
+      // Check current count
+      const currentCount = data.count || 0;
+      if (currentCount >= 3) {
+        return { 
+          allowed: false, 
+          remaining: 0,
+          error: 'Daily limit reached (3 uses). Resets at midnight.' 
+        };
+      }
+      
+      return { allowed: true, remaining: 3 - currentCount };
+      
+    } catch (firestoreError) {
+      console.error('Firestore operation error:', firestoreError);
+      // If Firestore fails, allow the operation
+      return { allowed: true, remaining: 3 };
+    }
+    
+  } catch (error) {
+    console.error('General error in checkLocationUsage:', error);
+    return { allowed: true, remaining: 3 };
+  }
+};
+  
+  // Increment location usage count
+  export const incrementLocationUsage = async (userId) => {
+    if (!userId) return { success: false };
+    
+    try {
+      const today = new Date().toDateString();
+      const docRef = doc(db, 'locationUsage', userId);
+      const userDoc = await getDoc(docRef);
+      
+      if (!userDoc.exists()) {
+        await setDoc(docRef, {
+          date: today,
+          count: 1,
+          lastUsed: serverTimestamp()
+        });
+      } else {
+        const data = userDoc.data();
+        
+        if (data.date === today) {
+          await updateDoc(docRef, {
+            count: increment(1),
+            lastUsed: serverTimestamp()
+          });
+        } else {
+          // New day, reset count
+          await updateDoc(docRef, {
+            date: today,
+            count: 1,
+            lastUsed: serverTimestamp()
+          });
+        }
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error incrementing location usage:', error);
+      return { success: false };
+    }
+  };
 export default app;

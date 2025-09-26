@@ -1,9 +1,48 @@
-import React, { useState } from 'react';
+// src/CurrentAddressButton.jsx
+import React, { useState, useEffect } from 'react';
+import { auth } from './firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { checkLocationUsage, incrementLocationUsage } from './firebase';
 
 const CurrentAddressButton = ({ onAddressFetched, onClearAddress }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const [mapUrl, setMapUrl] = useState('');
+  const [usageRemaining, setUsageRemaining] = useState(3);
+  const [canUseLocation, setCanUseLocation] = useState(true);
+  const [user, setUser] = useState(null);
+
+  // Subscribe to auth state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      
+      if (firebaseUser) {
+        checkUsageLimit(firebaseUser.uid);
+      } else {
+        setCanUseLocation(false);
+        setStatusMessage('Please sign in to use location services');
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const checkUsageLimit = async (userId) => {
+    try {
+      const usage = await checkLocationUsage(userId);
+      setUsageRemaining(usage.remaining || 0);
+      setCanUseLocation(usage.allowed);
+
+      if (!usage.allowed && usage.error) {
+        setStatusMessage(usage.error);
+      }
+    } catch (error) {
+      console.error('Error checking usage limit:', error);
+      // Allow usage if check fails
+      setCanUseLocation(true);
+      setUsageRemaining(3);
+    }
+  };
 
   const getCurrentPosition = () => {
     return new Promise((resolve, reject) => {
@@ -62,8 +101,21 @@ const CurrentAddressButton = ({ onAddressFetched, onClearAddress }) => {
   };
 
   const getCurrentAddress = async () => {
+    if (!user) {
+      setStatusMessage('Please sign in to use location services');
+      return;
+    }
+
+    // Check usage before proceeding
+    const usage = await checkLocationUsage(user.uid);
+    if (!usage.allowed) {
+      setStatusMessage(usage.error || 'Daily limit reached (3 uses per day)');
+      setCanUseLocation(false);
+      return;
+    }
+
     setIsLoading(true);
-    setStatusMessage('📡 Fetching your current location...');
+    setStatusMessage(`📡 Fetching location... (${usage.remaining}/3 uses remaining today)`);
     setMapUrl('');
 
     try {
@@ -89,10 +141,18 @@ const CurrentAddressButton = ({ onAddressFetched, onClearAddress }) => {
         onAddressFetched(formatted);
       }
 
+      // Increment usage in Firestore
+      await incrementLocationUsage(user.uid);
+
+      // 🔑 Refresh usage from Firestore so everything matches
+      const updatedUsage = await checkLocationUsage(user.uid);
+      setUsageRemaining(updatedUsage.remaining || 0);
+      setCanUseLocation(updatedUsage.allowed);
+
       const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${latitude},${longitude}&zoom=17&size=600x300&markers=color:red%7C${latitude},${longitude}&key=${process.env.REACT_APP_GOOGLE_MAPS_API_KEY}`;
       setMapUrl(staticMapUrl);
 
-      setStatusMessage('✅ Address loaded');
+      setStatusMessage(`✅ Address loaded (${updatedUsage.remaining}/3 uses remaining today)`);
     } catch (error) {
       console.error('Error getting address:', error);
       const errorMsg = `❌ ${error.message}`;
@@ -117,11 +177,15 @@ const CurrentAddressButton = ({ onAddressFetched, onClearAddress }) => {
     <div className="address-buttons">
       <button
         onClick={getCurrentAddress}
-        disabled={isLoading}
+        disabled={isLoading || !canUseLocation}
         className="get-address-button"
+        title={!canUseLocation ? 'Daily limit reached' : `${usageRemaining} uses remaining today`}
       >
-        {isLoading ? 'Getting Address...' : 'Get Address'}
+        {isLoading ? 'Getting Address...' : 
+         !canUseLocation ? 'Limit Reached' : 
+         `Get Address (${usageRemaining}/3)`}
       </button>
+
       <button
         onClick={resetAddress}
         disabled={isLoading}
@@ -136,7 +200,7 @@ const CurrentAddressButton = ({ onAddressFetched, onClearAddress }) => {
             src={mapUrl}
             alt="Map of current location"
             className="location-map-image"
-            crossOrigin='anonymous'
+            crossOrigin="anonymous"
           />
           <div className="map-popup-zoom">
             <img
@@ -149,6 +213,20 @@ const CurrentAddressButton = ({ onAddressFetched, onClearAddress }) => {
       )}
 
       {statusMessage && <div className="address-status">{statusMessage}</div>}
+      
+      {!canUseLocation && (
+        <div style={{
+          marginTop: '8px',
+          padding: '8px',
+          backgroundColor: '#fee',
+          border: '1px solid #fcc',
+          borderRadius: '4px',
+          fontSize: '0.85rem',
+          color: '#c00'
+        }}>
+          Daily limit reached. Location detection resets at midnight.
+        </div>
+      )}
     </div>
   );
 };
