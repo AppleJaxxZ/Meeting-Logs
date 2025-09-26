@@ -1,5 +1,46 @@
 /* Auth.css */
-
+/* Password strength indicator */
+.password-input-wrapper {
+    position: relative;
+    display: flex;
+    gap: 8px;
+  }
+  
+  .toggle-password {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #667eea;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 5px;
+  }
+  
+  .password-criteria {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0;
+    background: #f7f7f7;
+    border-radius: 8px;
+    padding: 12px;
+  }
+  
+  .password-criteria li {
+    padding: 4px 0;
+    font-size: 0.9rem;
+    transition: color 0.3s ease;
+  }
+  
+  .password-criteria li.valid {
+    color: #16a34a;
+  }
+  
+  .password-criteria li.invalid {
+    color: #dc2626;
+  }
 .auth-container {
     min-height: 100vh;
     display: flex;

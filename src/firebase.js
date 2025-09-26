@@ -7,7 +7,8 @@ import {
   signOut,
   sendPasswordResetEmail,
   updateProfile,
-  sendEmailVerification
+  sendEmailVerification,
+  deleteUser
 } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
@@ -143,7 +144,8 @@ export {
   loginUser, 
   logoutUser, 
   resetPassword,
-  resendVerificationEmail 
+  resendVerificationEmail,
+  deleteUser
 };
 
 // Default export if needed

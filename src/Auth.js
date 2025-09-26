@@ -1,12 +1,14 @@
-// Auth.js
 import React, { useState } from 'react';
-import { registerUser, loginUser, resetPassword, resendVerificationEmail } from './firebase';
+import {
+  registerUser,
+  loginUser,
+  resetPassword,
+  resendVerificationEmail
+} from './firebase';
 import './Auth.css';
 
 function Auth({ onAuthSuccess }) {
-  const [isLogin, setIsLogin] = useState(true);
-  const [isForgotPassword, setIsForgotPassword] = useState(false);
-  const [showVerificationMessage, setShowVerificationMessage] = useState(false);
+  const [mode, setMode] = useState('login'); // 'login' | 'signup' | 'forgot'
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -14,37 +16,67 @@ function Auth({ onAuthSuccess }) {
     displayName: ''
   });
   const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showVerificationMessage, setShowVerificationMessage] = useState(false);
+  const [passwordCriteria, setPasswordCriteria] = useState({
+    length: false,
+    uppercase: false,
+    lowercase: false,
+    number: false,
+    special: false
+  });
+
+  const isLogin = mode === 'login';
+  const isSignup = mode === 'signup';
+  const isForgot = mode === 'forgot';
+
+  const resetForm = () => {
+    setFormData({
+      email: '',
+      password: '',
+      confirmPassword: '',
+      displayName: ''
+    });
+    setErrors({});
+    setMessage('');
+  };
+
+  const checkPasswordCriteria = (password) => {
+    const rules = {
+      length: password.length >= 8,
+      uppercase: new RegExp("[A-Z]").test(password),
+      lowercase: new RegExp("[a-z]").test(password),
+      number: new RegExp("\\d").test(password),
+      special: new RegExp("[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]").test(password)
+    };
+  
+    setPasswordCriteria(rules);
+  };
+  
 
   const validateForm = () => {
     const newErrors = {};
-    
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = 'Invalid email format';
-    }
 
-    if (!isForgotPassword) {
-      // Password validation
-      if (!formData.password) {
-        newErrors.password = 'Password is required';
-      } else if (formData.password.length < 6) {
-        newErrors.password = 'Password must be at least 6 characters';
+    if (!formData.email) newErrors.email = 'Email is required';
+    else if (!emailRegex.test(formData.email)) newErrors.email = 'Invalid email format';
+
+    if (!isForgot) {
+      if (!formData.password) newErrors.password = 'Password is required';
+      else {
+        const strongRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,20}$/;
+        if (!strongRegex.test(formData.password)) {
+          newErrors.password =
+            'Password must be 8–20 chars and include uppercase, lowercase, number, and special character.';
+        }
       }
 
-      // Sign up specific validation
-      if (!isLogin) {
-        if (!formData.displayName) {
-          newErrors.displayName = 'Name is required';
-        }
-        
-        if (formData.password !== formData.confirmPassword) {
+      if (isSignup) {
+        if (!formData.displayName) newErrors.displayName = 'Name is required';
+        if (formData.password !== formData.confirmPassword)
           newErrors.confirmPassword = 'Passwords do not match';
-        }
       }
     }
 
@@ -54,50 +86,24 @@ function Auth({ onAuthSuccess }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    // Clear error for this field when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-  };
-
-  const handleResendVerification = async () => {
-    setLoading(true);
-    const result = await resendVerificationEmail();
-    if (result.success) {
-      setMessage(result.message);
-    } else {
-      setErrors({ general: result.error });
-    }
-    setLoading(false);
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
+    if (name === 'password' && isSignup) checkPasswordCriteria(value);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
-
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setLoading(true);
-
     try {
-      if (isForgotPassword) {
+      if (isForgot) {
         const result = await resetPassword(formData.email);
         if (result.success) {
-          setMessage('Password reset email sent! Check your inbox and spam folder.');
-          setFormData({ email: '', password: '', confirmPassword: '', displayName: '' });
-          setTimeout(() => {
-            setIsForgotPassword(false);
-            setMessage('');
-          }, 5000);
+          setMessage('Password reset email sent!');
+          resetForm();
+          setTimeout(() => setMode('login'), 5000);
         } else {
           setErrors({ general: result.error });
         }
@@ -106,69 +112,40 @@ function Auth({ onAuthSuccess }) {
         if (result.success) {
           if (!result.emailVerified) {
             setShowVerificationMessage(true);
-            setMessage('Please verify your email to continue. Check your inbox for the verification link.');
-            // Still allow login but show warning
-            if (onAuthSuccess) {
-              onAuthSuccess(result.user);
-            }
-          } else {
-            setMessage('Login successful!');
-            if (onAuthSuccess) {
-              onAuthSuccess(result.user);
-            }
+            setMessage('Please verify your email to continue.');
           }
+          if (onAuthSuccess) onAuthSuccess(result.user);
         } else {
           setErrors({ general: result.error });
         }
       } else {
         const result = await registerUser(
-          formData.email, 
-          formData.password, 
+          formData.email,
+          formData.password,
           formData.displayName
         );
         if (result.success) {
           setShowVerificationMessage(true);
-          setMessage(result.message || 'Account created! Please check your email to verify your account.');
-          // Clear form
-          setFormData({ email: '', password: '', confirmPassword: '', displayName: '' });
-          // Switch to login after 5 seconds
-          setTimeout(() => {
-            setIsLogin(true);
-            setShowVerificationMessage(false);
-          }, 5000);
+          setMessage(result.message || 'Account created! Check your email.');
+          resetForm();
+          setTimeout(() => setMode('login'), 5000);
         } else {
           setErrors({ general: result.error });
         }
       }
-    } catch (error) {
+    } catch {
       setErrors({ general: 'An unexpected error occurred' });
     } finally {
       setLoading(false);
     }
   };
 
-  const switchMode = () => {
-    setIsLogin(!isLogin);
-    setIsForgotPassword(false);
-    setShowVerificationMessage(false);
-    setFormData({ email: '', password: '', confirmPassword: '', displayName: '' });
-    setErrors({});
-    setMessage('');
-  };
-
-  const handleForgotPassword = () => {
-    setIsForgotPassword(true);
-    setShowVerificationMessage(false);
-    setErrors({});
-    setMessage('');
-  };
-
-  const backToLogin = () => {
-    setIsForgotPassword(false);
-    setIsLogin(true);
-    setShowVerificationMessage(false);
-    setErrors({});
-    setMessage('');
+  const handleResendVerification = async () => {
+    setLoading(true);
+    const result = await resendVerificationEmail();
+    if (result.success) setMessage(result.message);
+    else setErrors({ general: result.error });
+    setLoading(false);
   };
 
   return (
@@ -176,13 +153,13 @@ function Auth({ onAuthSuccess }) {
       <div className="auth-card">
         <div className="auth-header">
           <h2 className="auth-title">
-            {isForgotPassword ? 'Reset Password' : isLogin ? 'Welcome Back' : 'Create Account'}
+            {isForgot ? 'Reset Password' : isLogin ? 'Meeting Logger' : 'Create Account'}
           </h2>
           <p className="auth-subtitle">
-            {isForgotPassword 
+            {isForgot
               ? 'Enter your email to receive a reset link'
-              : isLogin 
-              ? 'Sign in to access your attendance records' 
+              : isLogin
+              ? 'Sign in to access your attendance records'
               : 'Sign up to start tracking your meetings'}
           </p>
         </div>
@@ -191,9 +168,9 @@ function Auth({ onAuthSuccess }) {
           <div className="verification-notice">
             <div className="verification-icon">📧</div>
             <h3>Check Your Email!</h3>
-            <p>We've sent a verification link to your email address. Please click the link to verify your account.</p>
-            <button 
-              onClick={handleResendVerification} 
+            <p>We've sent a verification link to your email address.</p>
+            <button
+              onClick={handleResendVerification}
               className="resend-button"
               disabled={loading}
             >
@@ -203,19 +180,10 @@ function Auth({ onAuthSuccess }) {
         )}
 
         <form onSubmit={handleSubmit} className="auth-form">
-          {errors.general && (
-            <div className="error-message general-error">
-              {errors.general}
-            </div>
-          )}
-          
-          {message && (
-            <div className="success-message">
-              {message}
-            </div>
-          )}
+          {errors.general && <div className="error-message general-error">{errors.general}</div>}
+          {message && <div className="success-message">{message}</div>}
 
-          {!isLogin && !isForgotPassword && (
+          {isSignup && (
             <div className="form-group">
               <label htmlFor="displayName">Full Name</label>
               <input
@@ -227,9 +195,7 @@ function Auth({ onAuthSuccess }) {
                 placeholder="Enter your full name"
                 className={errors.displayName ? 'error' : ''}
               />
-              {errors.displayName && (
-                <span className="error-message">{errors.displayName}</span>
-              )}
+              {errors.displayName && <span className="error-message">{errors.displayName}</span>}
             </div>
           )}
 
@@ -245,68 +211,77 @@ function Auth({ onAuthSuccess }) {
               className={errors.email ? 'error' : ''}
               autoComplete="email"
             />
-            {errors.email && (
-              <span className="error-message">{errors.email}</span>
-            )}
+            {errors.email && <span className="error-message">{errors.email}</span>}
           </div>
 
-          {!isForgotPassword && (
+          {!isForgot && (
             <>
               <div className="form-group">
                 <label htmlFor="password">Password</label>
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="Enter your password"
-                  className={errors.password ? 'error' : ''}
-                  autoComplete={isLogin ? "current-password" : "new-password"}
-                />
-                {errors.password && (
-                  <span className="error-message">{errors.password}</span>
-                )}
+                <div className="password-input-wrapper">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    id="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="Enter your password"
+                    className={errors.password ? 'error' : ''}
+                    autoComplete={isLogin ? 'current-password' : 'new-password'}
+                  />
+                  <button
+                    type="button"
+                    className="toggle-password"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+                {errors.password && <span className="error-message">{errors.password}</span>}
               </div>
 
-              {!isLogin && (
-                <div className="form-group">
+              {isSignup && (
+                <>
+                  <ul className="password-criteria">
+                    <li className={passwordCriteria.length ? 'valid' : 'invalid'}>✅ At least 8 characters</li>
+                    <li className={passwordCriteria.uppercase ? 'valid' : 'invalid'}>✅ One uppercase letter</li>
+                    <li className={passwordCriteria.lowercase ? 'valid' : 'invalid'}>✅ One lowercase letter</li>
+                    <li className={passwordCriteria.number ? 'valid' : 'invalid'}>✅ One number</li>
+                    <li className={passwordCriteria.special ? 'valid' : 'invalid'}>✅ One special character</li>
+                  </ul>
+
+                  <div className="form-group">
                   <label htmlFor="confirmPassword">Confirm Password</label>
-                  <input
-                    type="password"
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    placeholder="Confirm your password"
-                    className={errors.confirmPassword ? 'error' : ''}
-                    autoComplete="new-password"
-                  />
-                  {errors.confirmPassword && (
-                    <span className="error-message">{errors.confirmPassword}</span>
-                  )}
-                </div>
+                    <input
+                      type="password"
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      placeholder="Confirm your password"
+                      className={errors.confirmPassword ? 'error' : ''}
+                      autoComplete="new-password"
+                    />
+                    {errors.confirmPassword && (
+                      <span className="error-message">{errors.confirmPassword}</span>
+                    )}
+                  </div>
+                </>
               )}
             </>
           )}
 
-          <button 
-            type="submit" 
-            className="auth-button"
-            disabled={loading}
-          >
+          <button type="submit" className="auth-button" disabled={loading}>
             {loading ? (
               <span className="loading-spinner"></span>
-            ) : (
-              isForgotPassword ? 'Send Reset Email' : isLogin ? 'Sign In' : 'Sign Up'
-            )}
+            ) : isForgot ? 'Send Reset Email' : isLogin ? 'Sign In' : 'Sign Up'}
           </button>
 
-          {!isForgotPassword && isLogin && (
-            <button 
-              type="button" 
+          {isLogin && !isForgot && (
+            <button
+              type="button"
               className="forgot-password-link"
-              onClick={handleForgotPassword}
+              onClick={() => setMode('forgot')}
             >
               Forgot your password?
             </button>
@@ -314,17 +289,20 @@ function Auth({ onAuthSuccess }) {
         </form>
 
         <div className="auth-footer">
-          {isForgotPassword ? (
+          {isForgot ? (
             <p>
               Remember your password?{' '}
-              <button onClick={backToLogin} className="auth-link">
+              <button onClick={() => setMode('login')} className="auth-link">
                 Back to login
               </button>
             </p>
           ) : (
             <p>
-              {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
-              <button onClick={switchMode} className="auth-link">
+              {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
+              <button
+                onClick={() => setMode(isLogin ? 'signup' : 'login')}
+                className="auth-link"
+              >
                 {isLogin ? 'Sign Up' : 'Sign In'}
               </button>
             </p>
