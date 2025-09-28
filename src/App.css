@@ -316,19 +316,25 @@ button.submit-button:disabled {
 }
 
 .signature-action-buttons {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  padding: 16px;
-  background-color: white;
-  border-top: 1px solid #ccc;
-  box-sizing: border-box;
-  flex-shrink: 0; /* Prevent buttons from shrinking */
-  min-height: 80px; /* Ensure minimum space for buttons */
+  
+    display: flex;
+    flex-direction: row;   /* stack vertically */
+    justify-content: center;
+    align-items: stretch;
+    gap: 12px;                /* space between buttons */
+    padding: 16px;
+    background-color: white;
+    border-top: 1px solid #ccc;
+    box-sizing: border-box;
+  
+  
 }
 
 .signature-clear-button,
 .signature-done-button-large {
+  width: 100%;              /* full width of container */
+  max-width: 280px;         /* cap width so not oversized on desktop */
+  margin: 0 auto;           /* center them */
   padding: 14px 28px;
   font-size: 1.4rem;
   font-weight: bold;
@@ -426,7 +432,7 @@ button.submit-button:disabled {
   }
 
   .signature-action-buttons {
-    flex-direction: row;
+    flex-direction: column;
     align-items: center;
     gap: 12px;
     justify-content: space-around;
@@ -557,4 +563,258 @@ button.submit-button:disabled {
 /* === Utility / Export === */
 .hide-on-export {
   display: none !important;
+}
+
+
+
+/* === Clear Page Button === */
+button.clear-page-button {
+  padding: 10px 16px;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background-color: #dc2626;
+  color: white;
+  transition: background-color 0.15s ease;
+  margin: 0 8px;
+}
+button.clear-page-button:hover { background-color: #b91c1c; }
+
+/* === Button Bar === */
+.button-bar {
+  margin-top: 20px;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* === Signature overlay tweaks (re-affirm) === */
+.signature-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: white;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.signature-frame {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.signature-canvas-full {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  touch-action: none;
+  background-color: white;
+  display: block;
+}
+
+
+
+
+
+
+/* Status cell */
+td span {
+  display: inline-block;
+  min-width: 70px;
+}
+/* Signature column fix */
+.signature-cell {
+  min-width: 180px;       /* keeps it wide enough on desktop */
+  text-align: center;
+  vertical-align: top;
+}
+
+.signature-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.signature-status {
+  font-size: 0.75rem;
+  margin-top: 4px;
+  min-height: 1em;       /* reserves space even when blank */
+  color: #555;
+}
+
+.status-saved {
+  color: green;
+}
+.status-error {
+  color: red;
+}
+
+/* ---------- Signature column, preview and actions ---------- */
+
+/* Force the signature column to be roomy on desktop */
+.signature-cell {
+  width: 220px !important;
+  min-width: 220px !important;
+  max-width: 260px;
+  padding: 10px;
+  vertical-align: top;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+/* Inner wrapper stacks preview and actions */
+.signature-wrapper,
+.signature-preview-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Preview box */
+.signature-preview {
+  width: 100%;
+  height: 84px;
+  border: 1px dashed #ccc;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 6px;
+}
+
+/* Ensure preview image fits */
+.signature-preview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* Action buttons in preview (Change / Clear) */
+.signature-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Generic small signature buttons */
+.signature-btn {
+  padding: 6px 10px;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+/* Blue primary */
+.signature-add-btn {
+  background-color: #2563eb;
+  color: white;
+}
+
+/* Gray secondary */
+.signature-clear-preview {
+  background-color: #8b8b8b;
+  color: white;
+}
+
+/* Status line under preview */
+.signature-status {
+  font-size: 0.8rem;
+  color: #444;
+  min-height: 1em; /* reserve space */
+}
+
+/* Status colors */
+.status-saved { color: #16a34a; }
+.status-error { color: #dc2626; }
+
+/* Fullscreen signature overlay (unchanged but ensure high z-index) */
+.signature-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: white;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.signature-frame {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.signature-canvas-full {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  touch-action: none;
+  background-color: white;
+  display: block;
+}
+
+.signature-action-buttons {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 16px;
+  background-color: white;
+  border-top: 1px solid #ccc;
+  box-sizing: border-box;
+}
+
+.signature-clear-button,
+.signature-done-button-large {
+  padding: 12px 24px;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  color: white;
+}
+
+.signature-clear-button { background-color: #9ca3af; }
+.signature-done-button-large { background-color: #2563eb; }
+
+/* ---------- Responsive tweaks ---------- */
+@media (max-width: 720px) {
+  .signature-cell {
+    width: auto !important;
+    min-width: auto !important;
+    max-width: none;
+    padding: 8px;
+  }
+
+  .signature-preview {
+    width: 100%;
+    height: 84px;
+  }
 }

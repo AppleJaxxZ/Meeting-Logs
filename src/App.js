@@ -1,3 +1,4 @@
+// App.js
 import React, { useState, useEffect, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import AttendanceRow from './AttendanceRow';
@@ -7,21 +8,58 @@ import EmailVerification from './EmailVerification';
 import Navbar from './NavBar';
 import DeleteAccount from './DeleteAccount';
 import SoberSocial from './SoberSocial';
-import { auth, logoutUser } from './firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { auth, logoutUser, getMeetingLogs, saveFormMeta, clearMeetingLogs, onAuthStateChanged  } from './firebase';
+
 import {
   BrowserRouter as Router,
   Routes,
-  Route,
-  useNavigate
+  Route
 } from 'react-router-dom';
 import './index.css';
+import './App.css';
 
-function MeetingLogPage({ name, setName, dateRange, setDateRange, rows, setRows, sheetRef, captureAndDownload, openEmailClient }) {
+function MeetingLogPage({
+  user,
+  name,
+  setName,
+  dateRange,
+  setDateRange,
+  rows,
+  setRows,
+  sheetRef,
+  captureAndDownload,
+  openEmailClient
+}) {
   const updateRow = (index, newData) => {
     const updated = [...rows];
     updated[index] = newData;
     setRows(updated);
+  };
+
+  const handleClearPage = async () => {
+    const confirmed = window.confirm('Are you sure you want to clear the form? This will erase all inputs and stored logs.');
+    if (!confirmed) return;
+
+    // Reset UI state
+    setName('');
+    setDateRange('');
+    setRows(Array(16).fill().map(() => ({
+      date: '',
+      time: '',
+      meetingName: '',
+      location: '',
+      impact: '',
+      signature: null
+    })));
+
+    // Clear Firestore
+    if (user?.uid) {
+      const res = await clearMeetingLogs(user.uid);
+      if (!res.success) {
+        console.error('Clear logs error:', res.error);
+        alert('Error clearing logs on server. Check console.');
+      }
+    }
   };
 
   return (
@@ -54,22 +92,38 @@ function MeetingLogPage({ name, setName, dateRange, setDateRange, rows, setRows,
                 <th>Location</th>
                 <th>Chair Signature</th>
                 <th>How the Meeting Affected Me</th>
+                
               </tr>
             </thead>
             <tbody>
               {rows.map((row, i) => (
-                <AttendanceRow key={i} index={i} rowData={row} updateRow={updateRow} />
+                <AttendanceRow
+                  key={i}
+                  index={i}
+                  rowData={row}
+                  updateRow={updateRow}
+                  user={user}
+                />
               ))}
             </tbody>
           </table>
         </div>
 
-        <div style={{ marginTop: '20px', textAlign: 'center' }}>
+        <div className="button-bar">
           <button onClick={captureAndDownload} className="submit-button">
             📸 Save Attendance Sheet as Image
           </button>
-          <button onClick={openEmailClient} className="submit-button">
+
+          <button onClick={() => openEmailClient('officer@example.com')} className="submit-button">
             📧 Email My Officer
+          </button>
+
+          <button onClick={() => openEmailClient('second.officer@example.com')} className="submit-button">
+            📧 Email Second Officer
+          </button>
+
+          <button onClick={handleClearPage} className="clear-page-button">
+            🗑️ Clear Page
           </button>
         </div>
       </div>
@@ -80,72 +134,88 @@ function MeetingLogPage({ name, setName, dateRange, setDateRange, rows, setRows,
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [name, setName] = useState(() => localStorage.getItem('attendanceName') || '');
-  const [dateRange, setDateRange] = useState(() => localStorage.getItem('attendanceDateRange') || '');
-  const [rows, setRows] = useState(() => {
-    const saved = localStorage.getItem('attendanceRows');
-    return saved ? JSON.parse(saved) : Array(16).fill().map(() => ({
-      date: '',
-      time: '',
-      meetingName: '',
-      location: '',
-      impact: ''
-    }));
-  });
+  const [name, setName] = useState('');
+  const [dateRange, setDateRange] = useState('');
+  const [rows, setRows] = useState(Array(16).fill().map(() => ({
+    date: '',
+    time: '',
+    meetingName: '',
+    location: '',
+    impact: '',
+    signature: null
+  })));
 
   const sheetRef = useRef();
 
+  // Auth listener & load Firestore data on login
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       setLoading(false);
-      // Only set name if email is verified
-      if (currentUser && currentUser.emailVerified && currentUser.displayName && !name) {
-        setName(currentUser.displayName);
+
+      if (currentUser && currentUser.emailVerified) {
+        // load existing meeting logs from Firestore
+        try {
+          const res = await getMeetingLogs(currentUser.uid);
+          if (res.success) {
+            const meta = res.meta || {};
+            const fetchedRows = res.rows || [];
+            // Fill defaults up to 16 rows
+            const normalized = Array(16).fill().map((_, idx) => {
+              return fetchedRows[idx] || {
+                date: '',
+                time: '',
+                meetingName: '',
+                location: '',
+                impact: '',
+                signature: null
+              };
+            });
+            // If meta has name/dateRange use it; fallback to displayName
+            setRows(normalized);
+            setName(meta.name || currentUser.displayName || '');
+            setDateRange(meta.dateRange || '');
+          } else {
+            // no saved logs, set name if available
+            setName(currentUser.displayName || '');
+          }
+        } catch (err) {
+          console.error('Error loading meeting logs:', err);
+        }
+      } else {
+        // not logged in or not verified — keep defaults
       }
     });
     return () => unsubscribe();
-  }, [name]);
+  }, []);
 
+  // Debounced save of form meta (name, dateRange)
   useEffect(() => {
-    localStorage.setItem('attendanceName', name);
-  }, [name]);
-  
-  useEffect(() => {
-    localStorage.setItem('attendanceDateRange', dateRange);
-  }, [dateRange]);
-
-  useEffect(() => {
-    localStorage.setItem('attendanceRows', JSON.stringify(rows));
-  }, [rows]);
+    if (!user?.uid) return;
+    const timer = setTimeout(async () => {
+      await saveFormMeta(user.uid, { name, dateRange });
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [name, dateRange, user]);
 
   const handleLogout = async () => {
     const result = await logoutUser();
-    if (result.success) {
-      setUser(null);
-    }
+    if (result.success) setUser(null);
   };
 
   const handleAuthSuccess = (user) => {
     setUser(user);
-    // Don't set name yet if email not verified
-    if (user.displayName && user.emailVerified) {
-      setName(user.displayName);
-    }
   };
 
   const handleVerificationComplete = (verifiedUser) => {
     setUser(verifiedUser);
-    if (verifiedUser.displayName) {
-      setName(verifiedUser.displayName);
-    }
-    // Force re-render to show main app
+    // reload to ensure everything refreshes
     window.location.reload();
   };
 
   const captureAndDownload = async () => {
     if (!sheetRef.current) return;
-    
+
     const originalStyles = {
       width: sheetRef.current.style.width,
       transform: sheetRef.current.style.transform,
@@ -153,9 +223,10 @@ function App() {
       left: sheetRef.current.style.left,
       background: sheetRef.current.style.background,
       height: sheetRef.current.style.height,
-      overflow: sheetRef.current.style.overflow
+      overflow: sheetRef.current.style.overflow,
+      top: sheetRef.current.style.top
     };
-    
+
     const originalScrollPosition = window.scrollY;
 
     try {
@@ -168,23 +239,18 @@ function App() {
       sheetRef.current.style.background = 'white';
       sheetRef.current.style.height = 'auto';
       sheetRef.current.style.overflow = 'visible';
-      
-      // Add a class to force desktop table layout
+
       sheetRef.current.classList.add('force-desktop-capture');
-      
-      // Hide textareas and show display divs for location
+
       document.querySelectorAll('.location-display').forEach(el => el.classList.remove('hide-on-export'));
       document.querySelectorAll('.location-textarea').forEach(el => el.classList.add('hide-on-export'));
 
-      // Wait for layout to settle
       await new Promise(resolve => setTimeout(resolve, 200));
 
-      // Get the actual height of the content
       const contentHeight = sheetRef.current.scrollHeight;
       const contentWidth = 900;
 
-      // Capture with higher quality settings and full height
-      const canvas = await html2canvas(sheetRef.current, { 
+      const canvas = await html2canvas(sheetRef.current, {
         scale: 2,
         useCORS: true,
         logging: false,
@@ -202,49 +268,41 @@ function App() {
       // Restore visibility
       document.querySelectorAll('.location-display').forEach(el => el.classList.add('hide-on-export'));
       document.querySelectorAll('.location-textarea').forEach(el => el.classList.remove('hide-on-export'));
-      
-      // Remove the desktop force class
+
       sheetRef.current.classList.remove('force-desktop-capture');
-      
+
       // Restore original styles
       Object.keys(originalStyles).forEach(key => {
-        if (originalStyles[key] !== undefined) {
-          sheetRef.current.style[key] = originalStyles[key];
+        const value = originalStyles[key];
+        if (value !== undefined && value !== '') {
+          sheetRef.current.style[key] = value;
         } else {
           sheetRef.current.style.removeProperty(key);
         }
       });
-      
-      // Restore scroll position
+
       window.scrollTo(0, originalScrollPosition);
 
-      // Convert to PDF with proper sizing
       const imgData = canvas.toDataURL('image/jpeg', 0.9);
 
-      // Calculate PDF dimensions
-      const pdfWidth = 210; // A4 width in mm
+      const pdfWidth = 210; // mm
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-      // Create PDF with dynamic page height or split into multiple pages
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
-        format: [pdfWidth, pdfHeight > 297 ? pdfHeight : 297] // Use A4 height minimum
+        format: [pdfWidth, pdfHeight > 297 ? pdfHeight : 297]
       });
 
-      // If content is taller than one page, we might need to split it
       if (pdfHeight > 297) {
-        // For very long content, you might want to use standard A4 and let it overflow
         const pageHeight = 297;
         const imgHeight = pdfHeight;
         let heightLeft = imgHeight;
         let position = 0;
 
-        // Add first page
         pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
         heightLeft -= pageHeight;
 
-        // Add additional pages if needed
         while (heightLeft > 0) {
           position = heightLeft - imgHeight;
           pdf.addPage();
@@ -252,19 +310,17 @@ function App() {
           heightLeft -= pageHeight;
         }
       } else {
-        // Single page PDF
         pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
       }
 
       pdf.save('AttendanceSheet.pdf');
       alert('✅ PDF saved as "AttendanceSheet.pdf". Please attach it manually to your email before sending.');
-      
     } catch (error) {
       console.error('Error capturing PDF:', error);
-      // Restore original styles in case of error
       Object.keys(originalStyles).forEach(key => {
-        if (originalStyles[key] !== undefined) {
-          sheetRef.current.style[key] = originalStyles[key];
+        const value = originalStyles[key];
+        if (value !== undefined && value !== '') {
+          sheetRef.current.style[key] = value;
         } else {
           sheetRef.current.style.removeProperty(key);
         }
@@ -275,24 +331,24 @@ function App() {
     }
   };
 
-  const openEmailClient = () => {
+  const openEmailClient = (email = "officer@example.com") => {
     const subject = 'AA Attendance Sheet Submission';
-    const body = `Hi Officer,\n\nPlease find my attendance sheet attached as an image.\n\nName: ${name}\nDate Range: ${dateRange}\n\n (If not attached yet, please attach the file named "AttendanceSheet.pdf" before sending.)\n\nBest,\n${name || 'Your Name'}`;
-    window.location.href = `mailto:officer@example.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    const body = `Hi Officer,\n\nPlease find my attendance sheet attached as an image.\n\nName: ${name}\nDate Range: ${dateRange}\n\nBest,\n${name || 'Your Name'}`;
+    window.location.href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         height: '100vh',
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
       }}>
-        <div style={{ 
-          width: '50px', 
-          height: '50px', 
+        <div style={{
+          width: '50px',
+          height: '50px',
           border: '5px solid rgba(255, 255, 255, 0.3)',
           borderRadius: '50%',
           borderTopColor: 'white',
@@ -302,32 +358,32 @@ function App() {
     );
   }
 
-  // Show login/signup screen if not authenticated
+  // If not authenticated
   if (!user) {
     return <Auth onAuthSuccess={handleAuthSuccess} />;
   }
 
-  // Check if user needs to verify email
+  // If user must verify email
   if (user && !user.emailVerified) {
     return <EmailVerification onVerified={handleVerificationComplete} />;
   }
 
-  // Show the main app only if authenticated AND email is verified
   return (
     <Router>
       <Navbar handleLogout={handleLogout} />
       <Routes>
         <Route path="/" element={
-          <MeetingLogPage 
-            name={name} 
-            setName={setName} 
-            dateRange={dateRange} 
-            setDateRange={setDateRange} 
-            rows={rows} 
-            setRows={setRows} 
-            sheetRef={sheetRef} 
-            captureAndDownload={captureAndDownload} 
-            openEmailClient={openEmailClient} 
+          <MeetingLogPage
+            user={user}
+            name={name}
+            setName={setName}
+            dateRange={dateRange}
+            setDateRange={setDateRange}
+            rows={rows}
+            setRows={setRows}
+            sheetRef={sheetRef}
+            captureAndDownload={captureAndDownload}
+            openEmailClient={openEmailClient}
           />
         } />
         <Route path="/sober" element={<SoberSocial />} />
@@ -336,5 +392,5 @@ function App() {
     </Router>
   );
 }
-    
+
 export default App;

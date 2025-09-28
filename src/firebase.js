@@ -1,23 +1,33 @@
-// Import the functions you need from the SDKs you need
+// firebase.js
 import { initializeApp } from 'firebase/app';
-import { 
-  getAuth, 
+import {
+  getAuth,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
   sendPasswordResetEmail,
   updateProfile,
   sendEmailVerification,
-  deleteUser
+  deleteUser,
+  onAuthStateChanged, // export this directly too
 } from 'firebase/auth';
-import { getFirestore, doc, 
-    setDoc, 
-    getDoc, 
-    updateDoc,
-    serverTimestamp,
-    increment } from 'firebase/firestore';
+import {
+  getFirestore,
+  doc,
+  collection,
+  setDoc,
+  getDoc,
+  updateDoc,
+  serverTimestamp,
+  increment,
+  getDocs,
+  writeBatch,
+  deleteDoc,
+  query,
+  orderBy,
+} from 'firebase/firestore';
 
-// Your web app's Firebase configuration
+// ✅ Firebase Config from .env
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
@@ -25,250 +35,201 @@ const firebaseConfig = {
   storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.REACT_APP_FIREBASE_APP_ID,
-  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID,
 };
 
-// Initialize Firebase
+// ✅ Init Firebase
 const app = initializeApp(firebaseConfig);
-
-// Initialize Firebase Authentication and get a reference to the service
 const auth = getAuth(app);
-
-// Initialize Cloud Firestore and get a reference to the service  
 const db = getFirestore(app);
 
-export const testFirestoreConnection = async () => {
-    try {
-      const testDoc = doc(db, 'test', 'testDoc');
-      await setDoc(testDoc, {
-        message: 'Firestore is working!',
-        timestamp: serverTimestamp()
-      });
-      console.log('✅ Firestore write successful');
-      
-      const readBack = await getDoc(testDoc);
-      console.log('✅ Firestore read successful:', readBack.data());
-      return true;
-    } catch (error) {
-      console.error('❌ Firestore error:', error);
-      return false;
-    }
-  };
+/* ---------------- Firestore Helpers ---------------- */
 
-// Auth functions
-const registerUser = async (email, password, displayName) => {
+// Save a single row
+export const saveMeetingLog = async (userId, logId, data) => {
+  try {
+    if (!userId) throw new Error('Missing userId');
+    const logRef = doc(db, 'meetingLogs', userId, 'logs', logId);
+    await setDoc(logRef, { ...data, updatedAt: serverTimestamp() }, { merge: true });
+    return { success: true };
+  } catch (error) {
+    console.error('Error saving meeting log:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Save meta (name, dateRange)
+export const saveFormMeta = async (userId, meta = {}) => {
+  try {
+    if (!userId) throw new Error('Missing userId');
+    const metaRef = doc(db, 'meetingLogs', userId);
+    await setDoc(metaRef, { ...meta, updatedAt: serverTimestamp() }, { merge: true });
+    return { success: true };
+  } catch (error) {
+    console.error('Error saving form meta:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Load meta + rows
+export const getMeetingLogs = async (userId) => {
+  try {
+    if (!userId) throw new Error('Missing userId');
+    const metaRef = doc(db, 'meetingLogs', userId);
+    const metaSnap = await getDoc(metaRef);
+    const meta = metaSnap.exists() ? metaSnap.data() : {};
+
+    const logsCol = collection(db, 'meetingLogs', userId, 'logs');
+    const q = query(logsCol, orderBy('__name__'));
+    const snapshot = await getDocs(q);
+
+    const rows = [];
+    snapshot.forEach((docSnap) => {
+      const match = docSnap.id.match(/^row-(\d+)$/);
+      const idx = match ? parseInt(match[1], 10) : null;
+      if (idx !== null) rows[idx] = docSnap.data();
+    });
+
+    return { success: true, meta, rows };
+  } catch (error) {
+    console.error('Error fetching meeting logs:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Clear logs + meta
+export const clearMeetingLogs = async (userId) => {
+  try {
+    if (!userId) throw new Error('Missing userId');
+    const logsRef = collection(db, 'meetingLogs', userId, 'logs');
+    const snapshot = await getDocs(logsRef);
+    const batch = writeBatch(db);
+    snapshot.forEach((docSnap) => batch.delete(docSnap.ref));
+    batch.delete(doc(db, 'meetingLogs', userId));
+    await batch.commit();
+    return { success: true };
+  } catch (error) {
+    console.error('Error clearing logs:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/* ---------------- Auth Helpers ---------------- */
+
+export const registerUser = async (email, password, displayName) => {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-    
-    // Update the user's display name
-    await updateProfile(user, {
-      displayName: displayName
-    });
-    
-    // Send email verification
-    await sendEmailVerification(user, {
-      url: window.location.origin, // Redirect back to your app after verification
-      handleCodeInApp: false
-    });
-    
-    return { 
-      success: true, 
-      user: user,
-      emailSent: true,
-      message: 'Account created! Please check your email to verify your account.'
-    };
+    await updateProfile(user, { displayName });
+    await sendEmailVerification(user, { url: window.location.origin });
+    return { success: true, user, emailSent: true };
   } catch (error) {
-    console.error("Registration error:", error);
+    console.error('Registration error:', error);
     return { success: false, error: error.message };
   }
 };
 
-const loginUser = async (email, password) => {
+export const loginUser = async (email, password) => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-    
-    // Check if email is verified
-    if (!user.emailVerified) {
-      return { 
-        success: true, 
-        user: user,
-        emailVerified: false,
-        warning: 'Please verify your email before continuing. Check your inbox for the verification link.'
-      };
-    }
-    
-    return { 
-      success: true, 
-      user: user,
-      emailVerified: true 
-    };
+    return { success: true, user, emailVerified: user.emailVerified };
   } catch (error) {
-    console.error("Login error:", error);
+    console.error('Login error:', error);
     return { success: false, error: error.message };
   }
 };
 
-const logoutUser = async () => {
+export const logoutUser = async () => {
   try {
     await signOut(auth);
     return { success: true };
   } catch (error) {
-    console.error("Logout error:", error);
     return { success: false, error: error.message };
   }
 };
 
-const resetPassword = async (email) => {
+export const resetPassword = async (email) => {
   try {
-    await sendPasswordResetEmail(auth, email, {
-      url: window.location.origin, // Redirect back to your app after password reset
-      handleCodeInApp: false
-    });
-    return { 
-      success: true,
-      message: 'Password reset email sent! Please check your inbox.'
-    };
+    await sendPasswordResetEmail(auth, email, { url: window.location.origin });
+    return { success: true };
   } catch (error) {
-    console.error("Password reset error:", error);
     return { success: false, error: error.message };
   }
 };
 
-const resendVerificationEmail = async () => {
-  try {
-    const user = auth.currentUser;
-    if (user) {
-      await sendEmailVerification(user, {
-        url: window.location.origin,
-        handleCodeInApp: false
-      });
-      return { 
-        success: true, 
-        message: 'Verification email resent! Please check your inbox.' 
-      };
-    }
-    return { 
-      success: false, 
-      error: 'No user logged in' 
-    };
-  } catch (error) {
-    console.error("Resend verification error:", error);
-    return { success: false, error: error.message };
-  }
-};
-
-// Export everything at the end
-export { 
-  auth, 
-  db, 
-  registerUser, 
-  loginUser, 
-  logoutUser, 
-  resetPassword,
-  resendVerificationEmail,
-  deleteUser
-};
-
-//Check if user can use location (under 3 uses today)
-// Check if user can use location (under 3 uses today)
+// Track how many times a user has used location per day
 export const checkLocationUsage = async (userId) => {
-    console.log('UserId: ', userId)
-    console.log('auth.currentUser.uid:', auth.currentUser?.uid);
-  if (!userId) {
-    return { allowed: true, remaining: 3 }; // Allow if no user
-  }
-  
-  try {
-    const today = new Date().toDateString();
-    const docRef = doc(db, 'locationUsage', userId);
-    
-    try {
-      const userDoc = await getDoc(docRef);
-      
-      if (!userDoc.exists()) {
-        // First time user - create document
-        await setDoc(docRef, {
-          date: today,
-          count: 0,
-          createdAt: new Date().toISOString()
-        });
-        return { allowed: true, remaining: 3 };
-      }
-      
-      const data = userDoc.data();
-      
-      // Check if it's a new day
-      if (data.date !== today) {
-        await updateDoc(docRef, {
-          date: today,
-          count: 0
-        });
-        return { allowed: true, remaining: 3 };
-      }
-      
-      // Check current count
-      const currentCount = data.count || 0;
-      if (currentCount >= 3) {
-        return { 
-          allowed: false, 
-          remaining: 0,
-          error: 'Daily limit reached (3 uses). Resets at midnight.' 
-        };
-      }
-      
-      return { allowed: true, remaining: 3 - currentCount };
-      
-    } catch (firestoreError) {
-      console.error('Firestore operation error:', firestoreError);
-      // If Firestore fails, allow the operation
+    if (!userId) {
       return { allowed: true, remaining: 3 };
     }
-    
-  } catch (error) {
-    console.error('General error in checkLocationUsage:', error);
-    return { allowed: true, remaining: 3 };
-  }
-};
   
-  // Increment location usage count
-  export const incrementLocationUsage = async (userId) => {
-    if (!userId) return { success: false };
-    
     try {
       const today = new Date().toDateString();
       const docRef = doc(db, 'locationUsage', userId);
       const userDoc = await getDoc(docRef);
-      
+  
       if (!userDoc.exists()) {
-        await setDoc(docRef, {
-          date: today,
-          count: 1,
-          lastUsed: serverTimestamp()
-        });
+        await setDoc(docRef, { date: today, count: 0, createdAt: new Date().toISOString() });
+        return { allowed: true, remaining: 3 };
+      }
+  
+      const data = userDoc.data();
+      if (data.date !== today) {
+        await updateDoc(docRef, { date: today, count: 0 });
+        return { allowed: true, remaining: 3 };
+      }
+  
+      const count = data.count || 0;
+      if (count >= 3) {
+        return { allowed: false, remaining: 0, error: 'Daily limit reached (3 uses). Resets at midnight.' };
+      }
+  
+      return { allowed: true, remaining: 3 - count };
+    } catch (err) {
+      console.error('checkLocationUsage error:', err);
+      return { allowed: true, remaining: 3 };
+    }
+  };
+  
+  export const incrementLocationUsage = async (userId) => {
+    if (!userId) return { success: false };
+  
+    try {
+      const today = new Date().toDateString();
+      const docRef = doc(db, 'locationUsage', userId);
+      const userDoc = await getDoc(docRef);
+  
+      if (!userDoc.exists()) {
+        await setDoc(docRef, { date: today, count: 1, lastUsed: serverTimestamp() });
       } else {
         const data = userDoc.data();
-        
         if (data.date === today) {
-          await updateDoc(docRef, {
-            count: increment(1),
-            lastUsed: serverTimestamp()
-          });
+          await updateDoc(docRef, { count: increment(1), lastUsed: serverTimestamp() });
         } else {
-          // New day, reset count
-          await updateDoc(docRef, {
-            date: today,
-            count: 1,
-            lastUsed: serverTimestamp()
-          });
+          await updateDoc(docRef, { date: today, count: 1, lastUsed: serverTimestamp() });
         }
       }
-      
       return { success: true };
-    } catch (error) {
-      console.error('Error incrementing location usage:', error);
+    } catch (err) {
+      console.error('incrementLocationUsage error:', err);
       return { success: false };
     }
   };
-export default app;
+  
+
+export const resendVerificationEmail = async () => {
+  try {
+    const user = auth.currentUser;
+    if (user) {
+      await sendEmailVerification(user, { url: window.location.origin });
+      return { success: true };
+    }
+    return { success: false, error: 'No user logged in' };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+/* ---------------- Exports ---------------- */
+export { app, auth, db, deleteUser, onAuthStateChanged};

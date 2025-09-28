@@ -1,17 +1,18 @@
+// AttendanceRow.jsx
 import React, { useState, useRef, useEffect } from 'react';
-import SignaturePad from './SignaturePad';
 import CurrentAddressButton from './CurrentAddressButton';
+import SignaturePad from './SignaturePad';
 import SignatureCanvas from 'react-signature-canvas';
+import { saveMeetingLog } from './firebase';
 import './App.css';
 
-// Utility: Trim transparent edges from canvas
+/* Helper: Trim transparent edges from canvas */
 const trimCanvas = (canvas) => {
   const ctx = canvas.getContext('2d');
   const { width, height } = canvas;
   const imageData = ctx.getImageData(0, 0, width, height);
 
   let top = null, bottom = null, left = null, right = null;
-
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const alpha = imageData.data[(y * width + x) * 4 + 3];
@@ -38,59 +39,106 @@ const trimCanvas = (canvas) => {
   return trimmedCanvas;
 };
 
-function AttendanceRow({ index, rowData, updateRow }) {
+function AttendanceRow({ index, rowData, updateRow, user }) {
   const [isSigning, setIsSigning] = useState(false);
-  const [savedSignature, setSavedSignature] = useState(null);
-  const sigRef = useRef();
-  const fullScreenSigRef = useRef();
+  const [savedSignature, setSavedSignature] = useState(rowData.signature || null);
+  const [status, setStatus] = useState(''); // '', 'saving', 'saved', 'error'
+  const fullScreenSigRef = useRef(null);
+  const saveTimer = useRef(null);
 
-  const handleActivateSignature = () => {
-    setIsSigning(true);
-  };
+  useEffect(() => {
+    // keep the preview in sync when rowData updates (from Firestore load)
+    setSavedSignature(rowData.signature || null);
+  }, [rowData.signature]);
 
+  // Debounced local update + save trigger for editable fields
   const handleChange = (field, value) => {
-    updateRow(index, { ...rowData, [field]: value });
+    const next = { ...rowData, [field]: value };
+    updateRow(index, next);
+    triggerSave(next, true);
   };
 
-  const handleAddressUpdate = (address) => {
-    handleChange('location', address);
+  // Immediate save for signature & location
+  const handleImmediateSave = (nextRow) => {
+    updateRow(index, nextRow);
+    triggerSave(nextRow, false);
   };
 
-  const handleAddressClear = () => {
-    handleChange('location', '');
-  };
-
-  const saveSignature = () => {
-    if (fullScreenSigRef.current && !fullScreenSigRef.current.isEmpty()) {
-      const rawCanvas = fullScreenSigRef.current.getCanvas();
-      const canvas = trimCanvas(rawCanvas);
-      const dataURL = canvas.toDataURL('image/png');
-      const width = canvas.width;
-      const height = canvas.height;
-
-      const payload = JSON.stringify({ dataURL, width, height });
-      localStorage.setItem(`signature-${index}`, payload);
-      setSavedSignature({ dataURL, width, height });
+  const triggerSave = (nextRow, debounced = false) => {
+    if (!user?.uid) {
+      // not signed in — skip remote save
+      return;
     }
-  };
 
-  useEffect(() => {
-    if (savedSignature && sigRef.current) {
-      sigRef.current.fromDataURL(savedSignature);
-    }
-  }, [savedSignature]);
-
-  useEffect(() => {
-    const saved = localStorage.getItem(`signature-${index}`);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setSavedSignature(parsed);
-      } catch (err) {
-        console.error('Invalid signature data:', err);
+    if (debounced) {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => {
+        doSave(nextRow);
+      }, 1000); // 1 second debounce
+    } else {
+      // immediate
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = null;
       }
+      doSave(nextRow);
     }
-  }, [index]);
+  };
+
+  const doSave = async (row) => {
+    setStatus('saving');
+    try {
+      const payload = {
+        date: row.date || '',
+        time: row.time || '',
+        meetingName: row.meetingName || '',
+        location: row.location || '',
+        impact: row.impact || '',
+        signature: row.signature || null
+      };
+      const res = await saveMeetingLog(user.uid, `row-${index}`, payload);
+      if (res.success) {
+        setStatus('saved');
+        // keep green check visible briefly
+        setTimeout(() => setStatus(''), 2000);
+      } else {
+        console.error('Save row error:', res.error);
+        setStatus('error');
+      }
+    } catch (err) {
+      console.error('Unexpected save error:', err);
+      setStatus('error');
+    }
+  };
+
+  /* ---------------- Signature: Fullscreen flow --------------- */
+  const saveSignatureFromFullScreen = () => {
+    // if canvas has strokes, capture + trim -> save immediately
+    try {
+      if (fullScreenSigRef.current && !fullScreenSigRef.current.isEmpty()) {
+        const rawCanvas = fullScreenSigRef.current.getCanvas();
+        const trimmed = trimCanvas(rawCanvas) || rawCanvas;
+        const dataURL = trimmed.toDataURL('image/png');
+        const signaturePayload = { dataURL, width: trimmed.width, height: trimmed.height };
+
+        // update local preview & persist immediately
+        setSavedSignature(signaturePayload);
+        handleImmediateSave({ ...rowData, signature: signaturePayload });
+      }
+    } catch (err) {
+      console.error('Signature save error:', err);
+    } finally {
+      setIsSigning(false);
+    }
+  };
+
+  const clearSignature = () => {
+    setSavedSignature(null);
+    handleImmediateSave({ ...rowData, signature: null });
+    try {
+      if (fullScreenSigRef.current) fullScreenSigRef.current.clear();
+    } catch (e) {}
+  };
 
   return (
     <>
@@ -104,6 +152,7 @@ function AttendanceRow({ index, rowData, updateRow }) {
             maxLength={10}
           />
         </td>
+
         <td>
           <input
             className="time-input"
@@ -113,68 +162,71 @@ function AttendanceRow({ index, rowData, updateRow }) {
             maxLength={10}
           />
         </td>
-        <td>
-  <textarea
-    className="meeting-input"
-    placeholder="Name Of Meeting"
-    value={rowData.meetingName}
-    onChange={e => handleChange('meetingName', e.target.value)}
-    maxLength={22}
-    onInput={e => {
-      e.target.style.height = 'auto';
-      e.target.style.height = `${e.target.scrollHeight}px`;
-    }}
-    style={{
-      minHeight: '40px',
-      resize: 'none',
-      overflow: 'hidden',
-      width: '100%',
-      fontSize: '1rem',
-      padding: '10px 12px',
-      boxSizing: 'border-box',
-    }}
-  />
-</td>
-<td className="location-cell">
-  <CurrentAddressButton
-    onAddressFetched={handleAddressUpdate}
-    onClearAddress={handleAddressClear}
-  />
- {/* Display-only version for snapshot */}
-<div className="location-display hide-on-export">
-  {rowData.location}
-</div>
 
-{/* Editable textarea for user input */}
-<textarea
-  className="location-textarea"
-  value={rowData.location}
-  onChange={e => handleChange('location', e.target.value)}
-  maxLength={100}
-  placeholder="📍 Your current address"
-  onInput={e => {
-    e.target.style.height = 'auto';
-    e.target.style.height = `${e.target.scrollHeight}px`;
-  }}
-
-   
-  />
-</td>
         <td>
-          <SignaturePad
-            index={index}
-            onActivate={handleActivateSignature}
-            savedSignature={savedSignature}
+          <textarea
+            className="meeting-input"
+            placeholder="Name Of Meeting"
+            value={rowData.meetingName}
+            onChange={e => handleChange('meetingName', e.target.value)}
+            maxLength={120}
+            onInput={e => {
+              e.target.style.height = 'auto';
+              e.target.style.height = `${e.target.scrollHeight}px`;
+            }}
+            style={{ minHeight: '40px', resize: 'none', overflow: 'hidden', width: '100%' }}
           />
         </td>
+
+        <td className="location-cell">
+          <CurrentAddressButton
+            onAddressFetched={(addr) => handleImmediateSave({ ...rowData, location: addr })}
+            onClearAddress={() => handleImmediateSave({ ...rowData, location: '' })}
+          />
+
+          <div className="location-display hide-on-export" style={{ marginTop: 8 }}>
+            {rowData.location}
+          </div>
+
+          <textarea
+            className="location-textarea"
+            value={rowData.location}
+            onChange={e => handleChange('location', e.target.value)}
+            maxLength={200}
+            placeholder="📍 Your current address"
+            onInput={e => {
+              e.target.style.height = 'auto';
+              e.target.style.height = `${e.target.scrollHeight}px`;
+            }}
+          />
+        </td>
+
+        {/* ---------- Signature cell (preview + small status) ---------- */}
+        <td className="signature-cell">
+          <div className="signature-wrapper">
+            <SignaturePad
+              index={index}
+              onActivate={() => setIsSigning(true)}
+              savedSignature={savedSignature}
+              onClearSignature={clearSignature}
+            />
+
+            <div className="signature-status" aria-hidden>
+              {status === 'saving' && <span>💾 Saving…</span>}
+              {status === 'saved' && <span className="status-saved">✅</span>}
+              {status === 'error' && <span className="status-error">❌</span>}
+            </div>
+          </div>
+        </td>
+
         <td>
           <textarea
             className="impact-textarea"
             value={rowData.impact}
             onChange={e => handleChange('impact', e.target.value)}
-            maxLength={30}
+            maxLength={300}
             placeholder="How the meeting affected me"
-            style={{minHeight: '100px'}}
+            style={{ minHeight: '100px' }}
             onInput={e => {
               e.target.style.height = 'auto';
               e.target.style.height = `${e.target.scrollHeight}px`;
@@ -183,42 +235,32 @@ function AttendanceRow({ index, rowData, updateRow }) {
         </td>
       </tr>
 
+      {/* Fullscreen signature canvas overlay */}
       {isSigning && (
-  <div className="signature-overlay">
-    <div className="signature-frame">
-      <SignatureCanvas
-        ref={fullScreenSigRef}
-        penColor="black"
-        canvasProps={{ 
-          className: 'signature-canvas-full',
-          style: { 
-            width: '100%', 
-            height: '100%',
-            touchAction: 'none'
-          }
-        }}
-      />
-    </div>
-    <div className="signature-action-buttons">
-      <button
-        onClick={() => fullScreenSigRef.current.clear()}
-        className="signature-clear-button"
-      >
-        Clear
-      </button>
-      <button
-        onClick={() => {
-          saveSignature();
-          setIsSigning(false);
-        }}
-        className="signature-done-button-large"
-      >
-        Done
-      </button>
-    </div>
-  </div>
-)}
+        <div className="signature-overlay" role="dialog" aria-modal="true">
+          <div className="signature-frame">
+            <SignatureCanvas
+              ref={fullScreenSigRef}
+              penColor="black"
+              canvasProps={{ className: 'signature-canvas-full' }}
+            />
+          </div>
 
+          <div className="signature-action-buttons">
+            <button
+              onClick={() => {
+                try { if (fullScreenSigRef.current) fullScreenSigRef.current.clear(); } catch {}
+              }}
+              className="signature-clear-button"
+            >
+              Clear
+            </button>
+            <button onClick={saveSignatureFromFullScreen} className="signature-done-button-large">
+              Done
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

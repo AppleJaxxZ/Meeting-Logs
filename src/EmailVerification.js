@@ -97,7 +97,7 @@ function EmailVerification({ onVerified }) {
           </div>
           
           <h2 style={{ textAlign: 'center', marginTop: '20px', color: '#333' }}>
-            Verify Your Email
+            Verify Your Email.  
           </h2>
           
           <p style={{ 
