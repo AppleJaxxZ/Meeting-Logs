@@ -818,3 +818,48 @@ td span {
     height: 84px;
   }
 }
+
+
+/* === Input / Textarea with status === */
+.input-with-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  position: relative;
+  margin-bottom: 6px;
+}
+
+/* Desktop: status under the field */
+.input-with-status .field-status {
+  font-size: 0.75rem;
+  margin-top: 4px;
+  min-height: 1em;  /* reserve space */
+  color: #555;
+}
+
+/* Status colors */
+.status-saved { color: #16a34a; }   /* green */
+.status-error { color: #dc2626; }   /* red */
+.status-saving { color: #555; }     /* gray */
+ 
+/* === Mobile override === */
+@media (max-width: 720px) {
+  .input-with-status {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .input-with-status .field-status {
+    margin-top: 0;
+    min-width: 20px;
+    font-size: 1rem;  /* a little larger for visibility */
+    order: -1;        /* move status to the left of the input */
+  }
+
+  .input-with-status input,
+  .input-with-status textarea {
+    flex: 1;
+  }
+}

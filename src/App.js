@@ -1,5 +1,5 @@
-// App.js
-import React, { useState, useEffect, useRef } from 'react';
+// src/App.js
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import html2canvas from 'html2canvas';
 import AttendanceRow from './AttendanceRow';
 import jsPDF from 'jspdf';
@@ -8,13 +8,10 @@ import EmailVerification from './EmailVerification';
 import Navbar from './NavBar';
 import DeleteAccount from './DeleteAccount';
 import SoberSocial from './SoberSocial';
-import { auth, logoutUser, getMeetingLogs, saveFormMeta, clearMeetingLogs, onAuthStateChanged  } from './firebase';
+import { auth, logoutUser, getMeetingLogs, saveFormMeta, clearMeetingLogs, onAuthStateChanged } from './firebase';
 
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route
-} from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import debounce from 'lodash.debounce';
 import './index.css';
 import './App.css';
 
@@ -30,6 +27,9 @@ function MeetingLogPage({
   captureAndDownload,
   openEmailClient
 }) {
+  // per-field meta status for name and dateRange
+  const [metaStatus, setMetaStatus] = useState({ name: '', dateRange: '' });
+
   const updateRow = (index, newData) => {
     const updated = [...rows];
     updated[index] = newData;
@@ -43,14 +43,18 @@ function MeetingLogPage({
     // Reset UI state
     setName('');
     setDateRange('');
-    setRows(Array(16).fill().map(() => ({
-      date: '',
-      time: '',
-      meetingName: '',
-      location: '',
-      impact: '',
-      signature: null
-    })));
+    setRows(
+      Array(16)
+        .fill()
+        .map(() => ({
+          date: '',
+          time: '',
+          meetingName: '',
+          location: '',
+          impact: '',
+          signature: null
+        }))
+    );
 
     // Clear Firestore
     if (user?.uid) {
@@ -62,6 +66,47 @@ function MeetingLogPage({
     }
   };
 
+  // save helpers (meta)
+  const doSaveMeta = async (field) => {
+    if (!user?.uid) return;
+    setMetaStatus((prev) => ({ ...prev, [field]: 'saving' }));
+    try {
+      // save both name and dateRange together (consistent meta document)
+      await saveFormMeta(user.uid, { name, dateRange });
+      setMetaStatus((prev) => ({ ...prev, [field]: 'saved' }));
+      // clear saved indicator after a moment
+      setTimeout(() => {
+        setMetaStatus((prev) => ({ ...prev, [field]: '' }));
+      }, 2000);
+    } catch (err) {
+      console.error('Meta save error:', err);
+      setMetaStatus((prev) => ({ ...prev, [field]: 'error' }));
+    }
+  };
+
+  // debounced wrapper so typing doesn't spam saves
+  const debouncedSaveMeta = useCallback(
+    debounce((field) => {
+      doSaveMeta(field);
+    }, 800),
+    [user, name, dateRange]
+  );
+
+  const handleMetaChange = (field, setter) => (e) => {
+    const value = e.target.value;
+    setter(value);
+    // show saving indicator for that field while debounced save will run
+    setMetaStatus((prev) => ({ ...prev, [field]: 'saving' }));
+    debouncedSaveMeta(field);
+  };
+
+  const renderMetaStatus = (field) => {
+    if (metaStatus[field] === 'saved') return <span className="status-saved">✅</span>;
+    if (metaStatus[field] === 'error') return <span className="status-error">❌</span>;
+    if (metaStatus[field] === 'saving') return <span className="status-saving">💾</span>;
+    return null;
+  };
+
   return (
     <div>
       {/* Main Attendance Form */}
@@ -71,16 +116,23 @@ function MeetingLogPage({
 
           <div className="form-group">
             <label>Name</label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="Enter name" />
+            <div className="input-with-status">
+              <input value={name} onChange={handleMetaChange('name', setName)} placeholder="Enter name" />
+              <div className="field-status">{renderMetaStatus('name')}</div>
+            </div>
           </div>
+
           <div className="form-group">
             <label>Date Range</label>
-            <input value={dateRange} onChange={e => setDateRange(e.target.value)} placeholder="09-10-2025 to 10-15-2025" />
+            <div className="input-with-status">
+              <input value={dateRange} onChange={handleMetaChange('dateRange', setDateRange)} placeholder="09-10-2025 to 10-15-2025" />
+              <div className="field-status">{renderMetaStatus('dateRange')}</div>
+            </div>
           </div>
+
           <div className="form-group">
             <label>IMPORTANT</label>
-            <p> 📍 Note: Your browser will ask for location permission. If you don't see a prompt, check your browser's address bar for a location icon.
-            </p>
+            <p> 📍 Note: Your browser will ask for location permission. If you don't see a prompt, check your browser's address bar for a location icon.</p>
           </div>
 
           <table>
@@ -92,18 +144,11 @@ function MeetingLogPage({
                 <th>Location</th>
                 <th>Chair Signature</th>
                 <th>How the Meeting Affected Me</th>
-                
               </tr>
             </thead>
             <tbody>
               {rows.map((row, i) => (
-                <AttendanceRow
-                  key={i}
-                  index={i}
-                  rowData={row}
-                  updateRow={updateRow}
-                  user={user}
-                />
+                <AttendanceRow key={i} index={i} rowData={row} updateRow={updateRow} user={user} />
               ))}
             </tbody>
           </table>
@@ -136,14 +181,18 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
   const [dateRange, setDateRange] = useState('');
-  const [rows, setRows] = useState(Array(16).fill().map(() => ({
-    date: '',
-    time: '',
-    meetingName: '',
-    location: '',
-    impact: '',
-    signature: null
-  })));
+  const [rows, setRows] = useState(
+    Array(16)
+      .fill()
+      .map(() => ({
+        date: '',
+        time: '',
+        meetingName: '',
+        location: '',
+        impact: '',
+        signature: null
+      }))
+  );
 
   const sheetRef = useRef();
 
@@ -154,57 +203,66 @@ function App() {
       setLoading(false);
 
       if (currentUser && currentUser.emailVerified) {
-        // load existing meeting logs from Firestore
         try {
           const res = await getMeetingLogs(currentUser.uid);
           if (res.success) {
             const meta = res.meta || {};
             const fetchedRows = res.rows || [];
-            // Fill defaults up to 16 rows
-            const normalized = Array(16).fill().map((_, idx) => {
-              return fetchedRows[idx] || {
-                date: '',
-                time: '',
-                meetingName: '',
-                location: '',
-                impact: '',
-                signature: null
-              };
-            });
-            // If meta has name/dateRange use it; fallback to displayName
+            // Normalize to exactly 16 rows
+            const normalized = Array(16)
+              .fill()
+              .map((_, idx) => {
+                const r = fetchedRows[idx] || {};
+                return {
+                  date: r.date || '',
+                  time: r.time || '',
+                  meetingName: r.meetingName || '',
+                  location: r.location || '',
+                  impact: r.impact || '',
+                  signature: r.signature || null
+                };
+              });
             setRows(normalized);
             setName(meta.name || currentUser.displayName || '');
             setDateRange(meta.dateRange || '');
           } else {
-            // no saved logs, set name if available
+            // no saved logs, fill defaults and set name if available
+            setRows(
+              Array(16)
+                .fill()
+                .map(() => ({
+                  date: '',
+                  time: '',
+                  meetingName: '',
+                  location: '',
+                  impact: '',
+                  signature: null
+                }))
+            );
             setName(currentUser.displayName || '');
           }
         } catch (err) {
           console.error('Error loading meeting logs:', err);
         }
       } else {
-        // not logged in or not verified — keep defaults
+        // Not logged in or not verified; keep defaults
       }
     });
-    return () => unsubscribe();
-  }, []);
 
-  // Debounced save of form meta (name, dateRange)
-  useEffect(() => {
-    if (!user?.uid) return;
-    const timer = setTimeout(async () => {
-      await saveFormMeta(user.uid, { name, dateRange });
-    }, 800);
-    return () => clearTimeout(timer);
-  }, [name, dateRange, user]);
+    return () => {
+      try {
+        unsubscribe && unsubscribe();
+      } catch {}
+    };
+  }, []);
 
   const handleLogout = async () => {
     const result = await logoutUser();
     if (result.success) setUser(null);
   };
 
-  const handleAuthSuccess = (user) => {
-    setUser(user);
+  const handleAuthSuccess = (userObj) => {
+    setUser(userObj);
   };
 
   const handleVerificationComplete = (verifiedUser) => {
@@ -213,6 +271,7 @@ function App() {
     window.location.reload();
   };
 
+  // capture & download (keeps desktop look during capture)
   const captureAndDownload = async () => {
     if (!sheetRef.current) return;
 
@@ -242,10 +301,12 @@ function App() {
 
       sheetRef.current.classList.add('force-desktop-capture');
 
-      document.querySelectorAll('.location-display').forEach(el => el.classList.remove('hide-on-export'));
-      document.querySelectorAll('.location-textarea').forEach(el => el.classList.add('hide-on-export'));
+      // show location-display and hide location-textarea for export
+      document.querySelectorAll('.location-display').forEach((el) => el.classList.remove('hide-on-export'));
+      document.querySelectorAll('.location-textarea').forEach((el) => el.classList.add('hide-on-export'));
 
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // small delay for layout
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       const contentHeight = sheetRef.current.scrollHeight;
       const contentWidth = 900;
@@ -265,14 +326,14 @@ function App() {
         x: 0
       });
 
-      // Restore visibility
-      document.querySelectorAll('.location-display').forEach(el => el.classList.add('hide-on-export'));
-      document.querySelectorAll('.location-textarea').forEach(el => el.classList.remove('hide-on-export'));
+      // Restore hide/show classes
+      document.querySelectorAll('.location-display').forEach((el) => el.classList.add('hide-on-export'));
+      document.querySelectorAll('.location-textarea').forEach((el) => el.classList.remove('hide-on-export'));
 
       sheetRef.current.classList.remove('force-desktop-capture');
 
       // Restore original styles
-      Object.keys(originalStyles).forEach(key => {
+      Object.keys(originalStyles).forEach((key) => {
         const value = originalStyles[key];
         if (value !== undefined && value !== '') {
           sheetRef.current.style[key] = value;
@@ -295,6 +356,7 @@ function App() {
       });
 
       if (pdfHeight > 297) {
+        // Single large image splat across pages (approx)
         const pageHeight = 297;
         const imgHeight = pdfHeight;
         let heightLeft = imgHeight;
@@ -317,7 +379,8 @@ function App() {
       alert('✅ PDF saved as "AttendanceSheet.pdf". Please attach it manually to your email before sending.');
     } catch (error) {
       console.error('Error capturing PDF:', error);
-      Object.keys(originalStyles).forEach(key => {
+      // restore styles on error
+      Object.keys(originalStyles).forEach((key) => {
         const value = originalStyles[key];
         if (value !== undefined && value !== '') {
           sheetRef.current.style[key] = value;
@@ -331,7 +394,8 @@ function App() {
     }
   };
 
-  const openEmailClient = (email = "officer@example.com") => {
+  // open email client helper
+  const openEmailClient = (email = 'officer@example.com') => {
     const subject = 'AA Attendance Sheet Submission';
     const body = `Hi Officer,\n\nPlease find my attendance sheet attached as an image.\n\nName: ${name}\nDate Range: ${dateRange}\n\nBest,\n${name || 'Your Name'}`;
     window.location.href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -339,31 +403,33 @@ function App() {
 
   if (loading) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-      }}>
-        <div style={{
-          width: '50px',
-          height: '50px',
-          border: '5px solid rgba(255, 255, 255, 0.3)',
-          borderRadius: '50%',
-          borderTopColor: 'white',
-          animation: 'spin 1s linear infinite'
-        }}></div>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+        }}
+      >
+        <div
+          style={{
+            width: '50px',
+            height: '50px',
+            border: '5px solid rgba(255, 255, 255, 0.3)',
+            borderRadius: '50%',
+            borderTopColor: 'white',
+            animation: 'spin 1s linear infinite'
+          }}
+        />
       </div>
     );
   }
 
-  // If not authenticated
   if (!user) {
     return <Auth onAuthSuccess={handleAuthSuccess} />;
   }
 
-  // If user must verify email
   if (user && !user.emailVerified) {
     return <EmailVerification onVerified={handleVerificationComplete} />;
   }
@@ -372,20 +438,23 @@ function App() {
     <Router>
       <Navbar handleLogout={handleLogout} />
       <Routes>
-        <Route path="/" element={
-          <MeetingLogPage
-            user={user}
-            name={name}
-            setName={setName}
-            dateRange={dateRange}
-            setDateRange={setDateRange}
-            rows={rows}
-            setRows={setRows}
-            sheetRef={sheetRef}
-            captureAndDownload={captureAndDownload}
-            openEmailClient={openEmailClient}
-          />
-        } />
+        <Route
+          path="/"
+          element={
+            <MeetingLogPage
+              user={user}
+              name={name}
+              setName={setName}
+              dateRange={dateRange}
+              setDateRange={setDateRange}
+              rows={rows}
+              setRows={setRows}
+              sheetRef={sheetRef}
+              captureAndDownload={captureAndDownload}
+              openEmailClient={openEmailClient}
+            />
+          }
+        />
         <Route path="/sober" element={<SoberSocial />} />
         <Route path="/delete" element={<DeleteAccount />} />
       </Routes>

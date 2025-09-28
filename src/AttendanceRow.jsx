@@ -1,18 +1,22 @@
 // AttendanceRow.jsx
-import React, { useState, useRef, useEffect } from 'react';
-import CurrentAddressButton from './CurrentAddressButton';
-import SignaturePad from './SignaturePad';
-import SignatureCanvas from 'react-signature-canvas';
-import { saveMeetingLog } from './firebase';
-import './App.css';
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import debounce from "lodash.debounce";
+import CurrentAddressButton from "./CurrentAddressButton";
+import SignaturePad from "./SignaturePad";
+import SignatureCanvas from "react-signature-canvas";
+import { saveMeetingLog } from "./firebase";
+import "./App.css";
 
 /* Helper: Trim transparent edges from canvas */
 const trimCanvas = (canvas) => {
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext("2d");
   const { width, height } = canvas;
   const imageData = ctx.getImageData(0, 0, width, height);
 
-  let top = null, bottom = null, left = null, right = null;
+  let top = null,
+    bottom = null,
+    left = null,
+    right = null;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const alpha = imageData.data[(y * width + x) * 4 + 3];
@@ -31,10 +35,10 @@ const trimCanvas = (canvas) => {
   const trimmedHeight = bottom - top + 1;
   const trimmedData = ctx.getImageData(left, top, trimmedWidth, trimmedHeight);
 
-  const trimmedCanvas = document.createElement('canvas');
+  const trimmedCanvas = document.createElement("canvas");
   trimmedCanvas.width = trimmedWidth;
   trimmedCanvas.height = trimmedHeight;
-  trimmedCanvas.getContext('2d').putImageData(trimmedData, 0, 0);
+  trimmedCanvas.getContext("2d").putImageData(trimmedData, 0, 0);
 
   return trimmedCanvas;
 };
@@ -42,91 +46,83 @@ const trimCanvas = (canvas) => {
 function AttendanceRow({ index, rowData, updateRow, user }) {
   const [isSigning, setIsSigning] = useState(false);
   const [savedSignature, setSavedSignature] = useState(rowData.signature || null);
-  const [status, setStatus] = useState(''); // '', 'saving', 'saved', 'error'
+  const [fieldStatus, setFieldStatus] = useState({}); // track per-field status
   const fullScreenSigRef = useRef(null);
-  const saveTimer = useRef(null);
 
   useEffect(() => {
-    // keep the preview in sync when rowData updates (from Firestore load)
     setSavedSignature(rowData.signature || null);
   }, [rowData.signature]);
 
-  // Debounced local update + save trigger for editable fields
+  /* ---------------- Saving Helpers ---------------- */
+
+  const doSave = async (row, field) => {
+    setFieldStatus((prev) => ({ ...prev, [field]: "saving" }));
+    try {
+      const payload = {
+        date: row.date || "",
+        time: row.time || "",
+        meetingName: row.meetingName || "",
+        location: row.location || "",
+        impact: row.impact || "",
+        signature: row.signature || null,
+      };
+
+      const res = await saveMeetingLog(user.uid, `row-${index}`, payload);
+      if (res.success) {
+        setFieldStatus((prev) => ({ ...prev, [field]: "saved" }));
+        // keep green check visible briefly
+        setTimeout(
+          () => setFieldStatus((prev) => ({ ...prev, [field]: "" })),
+          2000
+        );
+      } else {
+        console.error("Save row error:", res.error);
+        setFieldStatus((prev) => ({ ...prev, [field]: "error" }));
+      }
+    } catch (err) {
+      console.error("Unexpected save error:", err);
+      setFieldStatus((prev) => ({ ...prev, [field]: "error" }));
+    }
+  };
+
+  const debouncedSave = useCallback(
+    debounce((nextRow, field) => {
+      doSave(nextRow, field);
+    }, 1000),
+    [user, index]
+  );
+
   const handleChange = (field, value) => {
     const next = { ...rowData, [field]: value };
     updateRow(index, next);
-    triggerSave(next, true);
+    debouncedSave(next, field);
   };
 
-  // Immediate save for signature & location
-  const handleImmediateSave = (nextRow) => {
-    updateRow(index, nextRow);
-    triggerSave(nextRow, false);
+  const handleImmediateSave = (field, value) => {
+    const next = { ...rowData, [field]: value };
+    updateRow(index, next);
+    doSave(next, field);
   };
 
-  const triggerSave = (nextRow, debounced = false) => {
-    if (!user?.uid) {
-      // not signed in — skip remote save
-      return;
-    }
+  /* ---------------- Signature ---------------- */
 
-    if (debounced) {
-      if (saveTimer.current) clearTimeout(saveTimer.current);
-      saveTimer.current = setTimeout(() => {
-        doSave(nextRow);
-      }, 1000); // 1 second debounce
-    } else {
-      // immediate
-      if (saveTimer.current) {
-        clearTimeout(saveTimer.current);
-        saveTimer.current = null;
-      }
-      doSave(nextRow);
-    }
-  };
-
-  const doSave = async (row) => {
-    setStatus('saving');
-    try {
-      const payload = {
-        date: row.date || '',
-        time: row.time || '',
-        meetingName: row.meetingName || '',
-        location: row.location || '',
-        impact: row.impact || '',
-        signature: row.signature || null
-      };
-      const res = await saveMeetingLog(user.uid, `row-${index}`, payload);
-      if (res.success) {
-        setStatus('saved');
-        // keep green check visible briefly
-        setTimeout(() => setStatus(''), 2000);
-      } else {
-        console.error('Save row error:', res.error);
-        setStatus('error');
-      }
-    } catch (err) {
-      console.error('Unexpected save error:', err);
-      setStatus('error');
-    }
-  };
-
-  /* ---------------- Signature: Fullscreen flow --------------- */
   const saveSignatureFromFullScreen = () => {
-    // if canvas has strokes, capture + trim -> save immediately
     try {
       if (fullScreenSigRef.current && !fullScreenSigRef.current.isEmpty()) {
         const rawCanvas = fullScreenSigRef.current.getCanvas();
         const trimmed = trimCanvas(rawCanvas) || rawCanvas;
-        const dataURL = trimmed.toDataURL('image/png');
-        const signaturePayload = { dataURL, width: trimmed.width, height: trimmed.height };
+        const dataURL = trimmed.toDataURL("image/png");
+        const signaturePayload = {
+          dataURL,
+          width: trimmed.width,
+          height: trimmed.height,
+        };
 
-        // update local preview & persist immediately
         setSavedSignature(signaturePayload);
-        handleImmediateSave({ ...rowData, signature: signaturePayload });
+        handleImmediateSave("signature", signaturePayload);
       }
     } catch (err) {
-      console.error('Signature save error:', err);
+      console.error("Signature save error:", err);
     } finally {
       setIsSigning(false);
     }
@@ -134,74 +130,110 @@ function AttendanceRow({ index, rowData, updateRow, user }) {
 
   const clearSignature = () => {
     setSavedSignature(null);
-    handleImmediateSave({ ...rowData, signature: null });
+    handleImmediateSave("signature", null);
     try {
       if (fullScreenSigRef.current) fullScreenSigRef.current.clear();
-    } catch (e) {}
+    } catch {}
+  };
+
+  /* ---------------- JSX ---------------- */
+
+  const renderStatus = (field) => {
+    if (fieldStatus[field] === "saved")
+      return <span className="status-saved">✅</span>;
+    if (fieldStatus[field] === "error")
+      return <span className="status-error">❌</span>;
+    if (fieldStatus[field] === "saving")
+      return <span className="status-saving">💾</span>;
+    return null;
   };
 
   return (
     <>
       <tr>
+        {/* Date */}
         <td>
-          <input
-            className="date-input"
-            placeholder="Enter Date"
-            value={rowData.date}
-            onChange={e => handleChange('date', e.target.value)}
-            maxLength={10}
-          />
+          <div className="input-with-status">
+            <input
+              className="date-input"
+              placeholder="Enter Date"
+              value={rowData.date}
+              onChange={(e) => handleChange("date", e.target.value)}
+              maxLength={10}
+            />
+            <div className="field-status">{renderStatus("date")}</div>
+          </div>
         </td>
 
+        {/* Time */}
         <td>
-          <input
-            className="time-input"
-            placeholder="Enter Time"
-            value={rowData.time}
-            onChange={e => handleChange('time', e.target.value)}
-            maxLength={10}
-          />
+          <div className="input-with-status">
+            <input
+              className="time-input"
+              placeholder="Enter Time"
+              value={rowData.time}
+              onChange={(e) => handleChange("time", e.target.value)}
+              maxLength={10}
+            />
+            <div className="field-status">{renderStatus("time")}</div>
+          </div>
         </td>
 
+        {/* Meeting Name */}
         <td>
-          <textarea
-            className="meeting-input"
-            placeholder="Name Of Meeting"
-            value={rowData.meetingName}
-            onChange={e => handleChange('meetingName', e.target.value)}
-            maxLength={120}
-            onInput={e => {
-              e.target.style.height = 'auto';
-              e.target.style.height = `${e.target.scrollHeight}px`;
-            }}
-            style={{ minHeight: '40px', resize: 'none', overflow: 'hidden', width: '100%' }}
-          />
+          <div className="input-with-status">
+            <textarea
+              className="meeting-input"
+              placeholder="Name Of Meeting"
+              value={rowData.meetingName}
+              onChange={(e) => handleChange("meetingName", e.target.value)}
+              maxLength={120}
+              onInput={(e) => {
+                e.target.style.height = "auto";
+                e.target.style.height = `${e.target.scrollHeight}px`;
+              }}
+              style={{
+                minHeight: "40px",
+                resize: "none",
+                overflow: "hidden",
+                width: "100%",
+              }}
+            />
+            <div className="field-status">{renderStatus("meetingName")}</div>
+          </div>
         </td>
 
+        {/* Location */}
         <td className="location-cell">
           <CurrentAddressButton
-            onAddressFetched={(addr) => handleImmediateSave({ ...rowData, location: addr })}
-            onClearAddress={() => handleImmediateSave({ ...rowData, location: '' })}
+            onAddressFetched={(addr) => handleImmediateSave("location", addr)}
+            onClearAddress={() => handleImmediateSave("location", "")}
           />
 
-          <div className="location-display hide-on-export" style={{ marginTop: 8 }}>
+          <div
+            className="location-display hide-on-export"
+            style={{ marginTop: 8 }}
+          >
             {rowData.location}
           </div>
 
-          <textarea
-            className="location-textarea"
-            value={rowData.location}
-            onChange={e => handleChange('location', e.target.value)}
-            maxLength={200}
-            placeholder="📍 Your current address"
-            onInput={e => {
-              e.target.style.height = 'auto';
-              e.target.style.height = `${e.target.scrollHeight}px`;
-            }}
-          />
+          <div className="input-with-status">
+            <textarea
+              className="location-textarea"
+              value={rowData.location}
+              onChange={(e) => handleChange("location", e.target.value)}
+              maxLength={200}
+              placeholder="📍 Your current address"
+              onInput={(e) => {
+                e.target.style.height = "auto";
+                e.target.style.height = `${e.target.scrollHeight}px`;
+              }}
+            />
+            <div className="field-status">{renderStatus("location")}</div>
+          </div>
         </td>
 
-        {/* ---------- Signature cell (preview + small status) ---------- */}
+        {/* Signature */}
         <td className="signature-cell">
           <div className="signature-wrapper">
             <SignaturePad
@@ -210,52 +242,58 @@ function AttendanceRow({ index, rowData, updateRow, user }) {
               savedSignature={savedSignature}
               onClearSignature={clearSignature}
             />
-
             <div className="signature-status" aria-hidden>
-              {status === 'saving' && <span>💾 Saving…</span>}
-              {status === 'saved' && <span className="status-saved">✅</span>}
-              {status === 'error' && <span className="status-error">❌</span>}
+              {renderStatus("signature")}
             </div>
           </div>
         </td>
 
+        {/* Impact */}
         <td>
-          <textarea
-            className="impact-textarea"
-            value={rowData.impact}
-            onChange={e => handleChange('impact', e.target.value)}
-            maxLength={300}
-            placeholder="How the meeting affected me"
-            style={{ minHeight: '100px' }}
-            onInput={e => {
-              e.target.style.height = 'auto';
-              e.target.style.height = `${e.target.scrollHeight}px`;
-            }}
-          />
+          <div className="input-with-status">
+            <textarea
+              className="impact-textarea"
+              value={rowData.impact}
+              onChange={(e) => handleChange("impact", e.target.value)}
+              maxLength={300}
+              placeholder="How the meeting affected me"
+              style={{ minHeight: "100px" }}
+              onInput={(e) => {
+                e.target.style.height = "auto";
+                e.target.style.height = `${e.target.scrollHeight}px`;
+              }}
+            />
+            <div className="field-status">{renderStatus("impact")}</div>
+          </div>
         </td>
       </tr>
 
-      {/* Fullscreen signature canvas overlay */}
+      {/* Fullscreen Signature Overlay */}
       {isSigning && (
         <div className="signature-overlay" role="dialog" aria-modal="true">
           <div className="signature-frame">
             <SignatureCanvas
               ref={fullScreenSigRef}
               penColor="black"
-              canvasProps={{ className: 'signature-canvas-full' }}
+              canvasProps={{ className: "signature-canvas-full" }}
             />
           </div>
 
           <div className="signature-action-buttons">
             <button
               onClick={() => {
-                try { if (fullScreenSigRef.current) fullScreenSigRef.current.clear(); } catch {}
+                try {
+                  if (fullScreenSigRef.current) fullScreenSigRef.current.clear();
+                } catch {}
               }}
               className="signature-clear-button"
             >
               Clear
             </button>
-            <button onClick={saveSignatureFromFullScreen} className="signature-done-button-large">
+            <button
+              onClick={saveSignatureFromFullScreen}
+              className="signature-done-button-large"
+            >
               Done
             </button>
           </div>
