@@ -51,24 +51,6 @@ function AttendanceRow({ index, rowData, updateRow, user }) {
 
   // debounce ref
   const debouncedSaveRef = useRef();
-
-  useEffect(() => {
-    // rebuild debounced save when user or row index changes
-    debouncedSaveRef.current = debounce((nextRow, field) => {
-      doSave(nextRow, field);
-    }, 1000);
-
-    return () => {
-      if (debouncedSaveRef.current) debouncedSaveRef.current.cancel();
-    };
-  }, [user?.uid, index, doSave]);
-
-  useEffect(() => {
-    setSavedSignature(rowData.signature || null);
-  }, [rowData.signature]);
-
-  /* ---------------- Saving Helpers ---------------- */
-
   const doSave = async (row, field) => {
     setFieldStatus((prev) => ({ ...prev, [field]: "saving" }));
     try {
@@ -97,6 +79,25 @@ function AttendanceRow({ index, rowData, updateRow, user }) {
       setFieldStatus((prev) => ({ ...prev, [field]: "error" }));
     }
   };
+
+  useEffect(() => {
+    // rebuild debounced save when user or row index changes
+    debouncedSaveRef.current = debounce((nextRow, field) => {
+      doSave(nextRow, field);
+    }, 1000);
+
+    return () => {
+      if (debouncedSaveRef.current) debouncedSaveRef.current.cancel();
+    };
+  }, [user?.uid, index, doSave]);
+
+  useEffect(() => {
+    setSavedSignature(rowData.signature || null);
+  }, [rowData.signature]);
+
+  /* ---------------- Saving Helpers ---------------- */
+
+  
 
   const handleChange = (field, value) => {
     const next = { ...rowData, [field]: value };
