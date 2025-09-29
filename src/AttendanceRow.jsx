@@ -56,12 +56,12 @@ function AttendanceRow({ index, rowData, updateRow, user }) {
     // rebuild debounced save when user or row index changes
     debouncedSaveRef.current = debounce((nextRow, field) => {
       doSave(nextRow, field);
-    }, 1000, [doSave]);
+    }, 1000);
 
     return () => {
       if (debouncedSaveRef.current) debouncedSaveRef.current.cancel();
     };
-  }, [user?.uid, index]);
+  }, [user?.uid, index, doSave]);
 
   useEffect(() => {
     setSavedSignature(rowData.signature || null);
