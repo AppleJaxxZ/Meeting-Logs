@@ -56,7 +56,7 @@ function AttendanceRow({ index, rowData, updateRow, user }) {
     // rebuild debounced save when user or row index changes
     debouncedSaveRef.current = debounce((nextRow, field) => {
       doSave(nextRow, field);
-    }, 1000);
+    }, 1000, [doSave]);
 
     return () => {
       if (debouncedSaveRef.current) debouncedSaveRef.current.cancel();
