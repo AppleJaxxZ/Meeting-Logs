@@ -1,5 +1,5 @@
 // AttendanceRow.jsx
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import debounce from "lodash.debounce";
 import CurrentAddressButton from "./CurrentAddressButton";
 import SignaturePad from "./SignaturePad";
@@ -51,7 +51,7 @@ function AttendanceRow({ index, rowData, updateRow, user }) {
 
   // debounce ref
   const debouncedSaveRef = useRef();
-  const doSave = async (row, field) => {
+  const doSave = useCallback(async (row, field) => {
     setFieldStatus((prev) => ({ ...prev, [field]: "saving" }));
     try {
       const payload = {
@@ -62,7 +62,7 @@ function AttendanceRow({ index, rowData, updateRow, user }) {
         impact: row.impact || "",
         signature: row.signature || null,
       };
-
+  
       const res = await saveMeetingLog(user.uid, `row-${index}`, payload);
       if (res.success) {
         setFieldStatus((prev) => ({ ...prev, [field]: "saved" }));
@@ -78,7 +78,8 @@ function AttendanceRow({ index, rowData, updateRow, user }) {
       console.error("Unexpected save error:", err);
       setFieldStatus((prev) => ({ ...prev, [field]: "error" }));
     }
-  };
+  }, [user?.uid, index]);
+  
 
   useEffect(() => {
     // rebuild debounced save when user or row index changes
