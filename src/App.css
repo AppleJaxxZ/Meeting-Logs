@@ -225,7 +225,7 @@ th {
 }
 
 tr:nth-child(even) {
-  background-color: #fafafa;
+  background-color: #d8d5d5f2;
 }
 
 /* === Primary Buttons === */
