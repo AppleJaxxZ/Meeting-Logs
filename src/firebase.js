@@ -22,7 +22,6 @@ import {
   increment,
   getDocs,
   writeBatch,
-  deleteDoc,
   query,
   orderBy,
 } from 'firebase/firestore';

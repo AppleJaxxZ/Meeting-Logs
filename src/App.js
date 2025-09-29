@@ -1,5 +1,5 @@
-// src/App.js
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+// App.js
+import React, { useState, useEffect, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import AttendanceRow from './AttendanceRow';
 import jsPDF from 'jspdf';
@@ -8,10 +8,21 @@ import EmailVerification from './EmailVerification';
 import Navbar from './NavBar';
 import DeleteAccount from './DeleteAccount';
 import SoberSocial from './SoberSocial';
-import { auth, logoutUser, getMeetingLogs, saveFormMeta, clearMeetingLogs, onAuthStateChanged } from './firebase';
-
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import {
+  auth,
+  logoutUser,
+  getMeetingLogs,
+  saveFormMeta,
+  clearMeetingLogs,
+  onAuthStateChanged
+} from './firebase';
 import debounce from 'lodash.debounce';
+
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route
+} from 'react-router-dom';
 import './index.css';
 import './App.css';
 
@@ -25,19 +36,13 @@ function MeetingLogPage({
   setRows,
   sheetRef,
   captureAndDownload,
-  openEmailClient
+  openEmailClient,
+  metaStatus
 }) {
-  // per-field meta status for name and dateRange
-  const [metaStatus, setMetaStatus] = useState({ name: '', dateRange: '' });
-
-  const updateRow = (index, newData) => {
-    const updated = [...rows];
-    updated[index] = newData;
-    setRows(updated);
-  };
-
   const handleClearPage = async () => {
-    const confirmed = window.confirm('Are you sure you want to clear the form? This will erase all inputs and stored logs.');
+    const confirmed = window.confirm(
+      'Are you sure you want to clear the form? This will erase all inputs and stored logs.'
+    );
     if (!confirmed) return;
 
     // Reset UI state
@@ -66,44 +71,13 @@ function MeetingLogPage({
     }
   };
 
-  // save helpers (meta)
-  const doSaveMeta = async (field) => {
-    if (!user?.uid) return;
-    setMetaStatus((prev) => ({ ...prev, [field]: 'saving' }));
-    try {
-      // save both name and dateRange together (consistent meta document)
-      await saveFormMeta(user.uid, { name, dateRange });
-      setMetaStatus((prev) => ({ ...prev, [field]: 'saved' }));
-      // clear saved indicator after a moment
-      setTimeout(() => {
-        setMetaStatus((prev) => ({ ...prev, [field]: '' }));
-      }, 2000);
-    } catch (err) {
-      console.error('Meta save error:', err);
-      setMetaStatus((prev) => ({ ...prev, [field]: 'error' }));
-    }
-  };
-
-  // debounced wrapper so typing doesn't spam saves
-  const debouncedSaveMeta = useCallback(
-    debounce((field) => {
-      doSaveMeta(field);
-    }, 800),
-    [user, name, dateRange]
-  );
-
-  const handleMetaChange = (field, setter) => (e) => {
-    const value = e.target.value;
-    setter(value);
-    // show saving indicator for that field while debounced save will run
-    setMetaStatus((prev) => ({ ...prev, [field]: 'saving' }));
-    debouncedSaveMeta(field);
-  };
-
-  const renderMetaStatus = (field) => {
-    if (metaStatus[field] === 'saved') return <span className="status-saved">✅</span>;
-    if (metaStatus[field] === 'error') return <span className="status-error">❌</span>;
-    if (metaStatus[field] === 'saving') return <span className="status-saving">💾</span>;
+  const renderStatus = (field) => {
+    if (metaStatus[field] === 'saved')
+      return <span className="status-saved">✅</span>;
+    if (metaStatus[field] === 'error')
+      return <span className="status-error">❌</span>;
+    if (metaStatus[field] === 'saving')
+      return <span className="status-saving">💾</span>;
     return null;
   };
 
@@ -112,27 +86,38 @@ function MeetingLogPage({
       {/* Main Attendance Form */}
       <div ref={sheetRef} id="form-capture" className="form-capture-desktop">
         <div className="container">
-          <h2>NORTHAMPTON COUNTY RECOVERY COURT SELF-HELP MEETING ATTENDANCE RECORD</h2>
+          <h2>
+            NORTHAMPTON COUNTY RECOVERY COURT SELF-HELP MEETING ATTENDANCE RECORD
+          </h2>
 
           <div className="form-group">
             <label>Name</label>
             <div className="input-with-status">
-              <input value={name} onChange={handleMetaChange('name', setName)} placeholder="Enter name" />
-              <div className="field-status">{renderMetaStatus('name')}</div>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter name"
+              />
+              <div className="field-status">{renderStatus('name')}</div>
             </div>
           </div>
-
           <div className="form-group">
             <label>Date Range</label>
             <div className="input-with-status">
-              <input value={dateRange} onChange={handleMetaChange('dateRange', setDateRange)} placeholder="09-10-2025 to 10-15-2025" />
-              <div className="field-status">{renderMetaStatus('dateRange')}</div>
+              <input
+                value={dateRange}
+                onChange={(e) => setDateRange(e.target.value)}
+                placeholder="09-10-2025 to 10-15-2025"
+              />
+              <div className="field-status">{renderStatus('dateRange')}</div>
             </div>
           </div>
-
           <div className="form-group">
             <label>IMPORTANT</label>
-            <p> 📍 Note: Your browser will ask for location permission. If you don't see a prompt, check your browser's address bar for a location icon.</p>
+            <p>
+              📍 Note: Your browser will ask for location permission. If you don't
+              see a prompt, check your browser's address bar for a location icon.
+            </p>
           </div>
 
           <table>
@@ -148,7 +133,17 @@ function MeetingLogPage({
             </thead>
             <tbody>
               {rows.map((row, i) => (
-                <AttendanceRow key={i} index={i} rowData={row} updateRow={updateRow} user={user} />
+                <AttendanceRow
+                  key={i}
+                  index={i}
+                  rowData={row}
+                  updateRow={(index, newData) => {
+                    const updated = [...rows];
+                    updated[index] = newData;
+                    setRows(updated);
+                  }}
+                  user={user}
+                />
               ))}
             </tbody>
           </table>
@@ -159,12 +154,18 @@ function MeetingLogPage({
             📸 Save Attendance Sheet as Image
           </button>
 
-          <button onClick={() => openEmailClient('officer@example.com')} className="submit-button">
-            📧 Email My Officer
+          <button
+            onClick={() => openEmailClient('officer@example.com')}
+            className="submit-button"
+          >
+            📧 Email F.O Cynthia 
           </button>
 
-          <button onClick={() => openEmailClient('second.officer@example.com')} className="submit-button">
-            📧 Email Second Officer
+          <button
+            onClick={() => openEmailClient('second.officer@example.com')}
+            className="submit-button"
+          >
+            📧 Email F.O Matt
           </button>
 
           <button onClick={handleClearPage} className="clear-page-button">
@@ -194,7 +195,9 @@ function App() {
       }))
   );
 
+  const [metaStatus, setMetaStatus] = useState({}); // track name/dateRange status
   const sheetRef = useRef();
+  const debouncedSaveRef = useRef();
 
   // Auth listener & load Firestore data on login
   useEffect(() => {
@@ -208,70 +211,90 @@ function App() {
           if (res.success) {
             const meta = res.meta || {};
             const fetchedRows = res.rows || [];
-            // Normalize to exactly 16 rows
+
             const normalized = Array(16)
               .fill()
               .map((_, idx) => {
-                const r = fetchedRows[idx] || {};
-                return {
-                  date: r.date || '',
-                  time: r.time || '',
-                  meetingName: r.meetingName || '',
-                  location: r.location || '',
-                  impact: r.impact || '',
-                  signature: r.signature || null
-                };
+                return (
+                  fetchedRows[idx] || {
+                    date: '',
+                    time: '',
+                    meetingName: '',
+                    location: '',
+                    impact: '',
+                    signature: null
+                  }
+                );
               });
+
             setRows(normalized);
             setName(meta.name || currentUser.displayName || '');
             setDateRange(meta.dateRange || '');
           } else {
-            // no saved logs, fill defaults and set name if available
-            setRows(
-              Array(16)
-                .fill()
-                .map(() => ({
-                  date: '',
-                  time: '',
-                  meetingName: '',
-                  location: '',
-                  impact: '',
-                  signature: null
-                }))
-            );
             setName(currentUser.displayName || '');
           }
         } catch (err) {
           console.error('Error loading meeting logs:', err);
         }
-      } else {
-        // Not logged in or not verified; keep defaults
       }
     });
+    return () => unsubscribe();
+  }, []);
+
+  // Build debounced save function
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    debouncedSaveRef.current = debounce(async (field, value) => {
+      setMetaStatus((prev) => ({ ...prev, [field]: 'saving' }));
+      try {
+        const res = await saveFormMeta(user.uid, {
+          name,
+          dateRange
+        });
+        if (res.success) {
+          setMetaStatus((prev) => ({ ...prev, [field]: 'saved' }));
+          setTimeout(
+            () => setMetaStatus((prev) => ({ ...prev, [field]: '' })),
+            2000
+          );
+        } else {
+          setMetaStatus((prev) => ({ ...prev, [field]: 'error' }));
+        }
+      } catch (err) {
+        console.error('Meta save error:', err);
+        setMetaStatus((prev) => ({ ...prev, [field]: 'error' }));
+      }
+    }, 800);
 
     return () => {
-      try {
-        unsubscribe && unsubscribe();
-      } catch {}
+      if (debouncedSaveRef.current) debouncedSaveRef.current.cancel();
     };
-  }, []);
+  }, [user?.uid, name, dateRange]);
+
+  // Trigger debounced save when name or dateRange changes
+  useEffect(() => {
+    if (!user?.uid) return;
+    if (debouncedSaveRef.current) {
+      if (name) debouncedSaveRef.current('name', name);
+      if (dateRange) debouncedSaveRef.current('dateRange', dateRange);
+    }
+  }, [name, dateRange, user?.uid]);
 
   const handleLogout = async () => {
     const result = await logoutUser();
     if (result.success) setUser(null);
   };
 
-  const handleAuthSuccess = (userObj) => {
-    setUser(userObj);
+  const handleAuthSuccess = (user) => {
+    setUser(user);
   };
 
   const handleVerificationComplete = (verifiedUser) => {
     setUser(verifiedUser);
-    // reload to ensure everything refreshes
     window.location.reload();
   };
 
-  // capture & download (keeps desktop look during capture)
   const captureAndDownload = async () => {
     if (!sheetRef.current) return;
 
@@ -289,7 +312,6 @@ function App() {
     const originalScrollPosition = window.scrollY;
 
     try {
-      // Force desktop layout for capture
       sheetRef.current.style.width = '900px';
       sheetRef.current.style.transform = 'scale(1)';
       sheetRef.current.style.position = 'absolute';
@@ -301,11 +323,13 @@ function App() {
 
       sheetRef.current.classList.add('force-desktop-capture');
 
-      // show location-display and hide location-textarea for export
-      document.querySelectorAll('.location-display').forEach((el) => el.classList.remove('hide-on-export'));
-      document.querySelectorAll('.location-textarea').forEach((el) => el.classList.add('hide-on-export'));
+      document
+        .querySelectorAll('.location-display')
+        .forEach((el) => el.classList.remove('hide-on-export'));
+      document
+        .querySelectorAll('.location-textarea')
+        .forEach((el) => el.classList.add('hide-on-export'));
 
-      // small delay for layout
       await new Promise((resolve) => setTimeout(resolve, 200));
 
       const contentHeight = sheetRef.current.scrollHeight;
@@ -326,13 +350,15 @@ function App() {
         x: 0
       });
 
-      // Restore hide/show classes
-      document.querySelectorAll('.location-display').forEach((el) => el.classList.add('hide-on-export'));
-      document.querySelectorAll('.location-textarea').forEach((el) => el.classList.remove('hide-on-export'));
+      document
+        .querySelectorAll('.location-display')
+        .forEach((el) => el.classList.add('hide-on-export'));
+      document
+        .querySelectorAll('.location-textarea')
+        .forEach((el) => el.classList.remove('hide-on-export'));
 
       sheetRef.current.classList.remove('force-desktop-capture');
 
-      // Restore original styles
       Object.keys(originalStyles).forEach((key) => {
         const value = originalStyles[key];
         if (value !== undefined && value !== '') {
@@ -345,8 +371,7 @@ function App() {
       window.scrollTo(0, originalScrollPosition);
 
       const imgData = canvas.toDataURL('image/jpeg', 0.9);
-
-      const pdfWidth = 210; // mm
+      const pdfWidth = 210;
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
       const pdf = new jsPDF({
@@ -356,7 +381,6 @@ function App() {
       });
 
       if (pdfHeight > 297) {
-        // Single large image splat across pages (approx)
         const pageHeight = 297;
         const imgHeight = pdfHeight;
         let heightLeft = imgHeight;
@@ -376,10 +400,11 @@ function App() {
       }
 
       pdf.save('AttendanceSheet.pdf');
-      alert('✅ PDF saved as "AttendanceSheet.pdf". Please attach it manually to your email before sending.');
+      alert(
+        '✅ PDF saved as "AttendanceSheet.pdf". Please attach it manually to your email before sending.'
+      );
     } catch (error) {
       console.error('Error capturing PDF:', error);
-      // restore styles on error
       Object.keys(originalStyles).forEach((key) => {
         const value = originalStyles[key];
         if (value !== undefined && value !== '') {
@@ -394,11 +419,14 @@ function App() {
     }
   };
 
-  // open email client helper
   const openEmailClient = (email = 'officer@example.com') => {
     const subject = 'AA Attendance Sheet Submission';
-    const body = `Hi Officer,\n\nPlease find my attendance sheet attached as an image.\n\nName: ${name}\nDate Range: ${dateRange}\n\nBest,\n${name || 'Your Name'}`;
-    window.location.href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    const body = `Hi Officer,\n\nPlease find my attendance sheet attached as an image.\n\nName: ${name}\nDate Range: ${dateRange}\n\nBest,\n${
+      name || 'Your Name'
+    }`;
+    window.location.href = `mailto:${email}?subject=${encodeURIComponent(
+      subject
+    )}&body=${encodeURIComponent(body)}`;
   };
 
   if (loading) {
@@ -421,7 +449,7 @@ function App() {
             borderTopColor: 'white',
             animation: 'spin 1s linear infinite'
           }}
-        />
+        ></div>
       </div>
     );
   }
@@ -452,6 +480,7 @@ function App() {
               sheetRef={sheetRef}
               captureAndDownload={captureAndDownload}
               openEmailClient={openEmailClient}
+              metaStatus={metaStatus}
             />
           }
         />

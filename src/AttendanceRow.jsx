@@ -1,5 +1,5 @@
 // AttendanceRow.jsx
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import debounce from "lodash.debounce";
 import CurrentAddressButton from "./CurrentAddressButton";
 import SignaturePad from "./SignaturePad";
@@ -49,6 +49,20 @@ function AttendanceRow({ index, rowData, updateRow, user }) {
   const [fieldStatus, setFieldStatus] = useState({}); // track per-field status
   const fullScreenSigRef = useRef(null);
 
+  // debounce ref
+  const debouncedSaveRef = useRef();
+
+  useEffect(() => {
+    // rebuild debounced save when user or row index changes
+    debouncedSaveRef.current = debounce((nextRow, field) => {
+      doSave(nextRow, field);
+    }, 1000);
+
+    return () => {
+      if (debouncedSaveRef.current) debouncedSaveRef.current.cancel();
+    };
+  }, [user?.uid, index]);
+
   useEffect(() => {
     setSavedSignature(rowData.signature || null);
   }, [rowData.signature]);
@@ -70,7 +84,6 @@ function AttendanceRow({ index, rowData, updateRow, user }) {
       const res = await saveMeetingLog(user.uid, `row-${index}`, payload);
       if (res.success) {
         setFieldStatus((prev) => ({ ...prev, [field]: "saved" }));
-        // keep green check visible briefly
         setTimeout(
           () => setFieldStatus((prev) => ({ ...prev, [field]: "" })),
           2000
@@ -85,17 +98,12 @@ function AttendanceRow({ index, rowData, updateRow, user }) {
     }
   };
 
-  const debouncedSave = useCallback(
-    debounce((nextRow, field) => {
-      doSave(nextRow, field);
-    }, 1000),
-    [user, index]
-  );
-
   const handleChange = (field, value) => {
     const next = { ...rowData, [field]: value };
     updateRow(index, next);
-    debouncedSave(next, field);
+    if (debouncedSaveRef.current) {
+      debouncedSaveRef.current(next, field);
+    }
   };
 
   const handleImmediateSave = (field, value) => {
