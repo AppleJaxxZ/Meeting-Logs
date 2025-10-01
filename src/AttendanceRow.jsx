@@ -163,8 +163,9 @@ function AttendanceRow({ index, rowData, updateRow, user }) {
       <tr>
         {/* Date */}
         <td>
+        <label>Meeting Date</label>
           <div className="input-with-status">
-            <label>Meeting Date</label>
+            
             <input
               className="date-input"
               placeholder="Enter Date"
@@ -178,8 +179,9 @@ function AttendanceRow({ index, rowData, updateRow, user }) {
 
         {/* Time */}
         <td>
+        <label>Meeting Time</label>
           <div className="input-with-status">
-            <label>Meeting Time</label>
+            
             <input
               className="time-input"
               placeholder="Enter Time"
@@ -193,8 +195,9 @@ function AttendanceRow({ index, rowData, updateRow, user }) {
 
         {/* Meeting Name */}
         <td>
+        <label>Meeting Name</label>
           <div className="input-with-status">
-            <label>Meeting Name</label>
+            
             <textarea
               className="meeting-input"
               placeholder="Name Of Meeting"
@@ -229,9 +232,9 @@ function AttendanceRow({ index, rowData, updateRow, user }) {
           >
             {rowData.location}
           </div>
-
+          <label>Meeting Location</label>
           <div className="input-with-status">
-            <label>Meeting Location</label>
+            
             <textarea
               className="location-textarea"
               value={rowData.location}
@@ -249,8 +252,9 @@ function AttendanceRow({ index, rowData, updateRow, user }) {
 
         {/* Signature */}
         <td className="signature-cell">
+        <label>Chair Signature</label>
           <div className="signature-wrapper">
-            <label>Chair Signature</label>
+        
             <SignaturePad
               index={index}
               onActivate={() => setIsSigning(true)}
